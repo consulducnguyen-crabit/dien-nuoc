@@ -183,12 +183,12 @@
 .usage-main { display: flex; flex-direction: column; align-items: flex-end; }
 .usage-notify { flex: 0 0 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .notify-state { font-size: 13px; font-weight: 600; color: var(--muted, #5B6285); }
-.notify-state.is-done { color: #0A5C42; }
+.notify-state.is-done { color: #1F3F7A; }
 .track-copy.usage-copy { min-height: 36px; }
 .table th[scope="row"] { text-align: left; font-size: 14px; font-weight: 700; color: var(--ink); padding: 12px; border-top: 1px solid #EEF0FA; }
 
 /* Hoá đơn kỳ (trang Nhập): ma trận căn x Điện/Nước; ô xanh = đã có, đỏ = chưa có.
-   Tương phản chữ trắng: #12805C ~4.9:1, #C23A3F ~5.3:1 (đều >= 4.5). Luôn 3 cột, không xuống hàng. */
+   Chữ trắng: #3366CC ~5.6:1; #FF3333 ~3.6:1 (màu do người dùng chọn, dưới 4.5 nhưng chữ đậm). Luôn 3 cột, không xuống hàng. */
 .track { margin-bottom: 16px; container-type: inline-size; }
 .track-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .track-summary { font-weight: 700; font-size: 14px; }
@@ -206,8 +206,8 @@
   display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 8px;
   border-radius: 10px; color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap;
 }
-.track-yes { background: #12805C; }
-.track-no { background: #C23A3F; }
+.track-yes { background: #3366CC; }
+.track-no { background: #FF3333; }
 .track-mark { flex: none; }
 /* Ô đã có hoá đơn là nút bấm (cả ô) để sao chép ảnh thông báo */
 .track-btn { border: 0; width: 100%; font-family: inherit; cursor: pointer; position: relative; }
@@ -219,19 +219,19 @@
   content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%;
   border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; animation: spin .7s linear infinite;
 }
-/* Đã thông báo: xanh đậm hơn (#0A5C42 vs chữ trắng ~8.5:1) + viền sáng bên trong, vẫn thuộc nhóm xanh; cho xuống dòng ở màn hẹp */
-.track-done { background: #0A5C42; box-shadow: inset 0 0 0 2px #9FE8C9; white-space: normal; text-align: center; line-height: 1.15; gap: 4px; padding: 0 4px; font-size: 12px; }
+/* Đã thông báo: xanh dương đậm hơn (#1F3F7A vs chữ trắng ~10:1) + viền sáng bên trong, vẫn thuộc nhóm xanh; cho xuống dòng ở màn hẹp */
+.track-done { background: #1F3F7A; box-shadow: inset 0 0 0 2px #A9C1F0; white-space: normal; text-align: center; line-height: 1.15; gap: 4px; padding: 0 4px; font-size: 12px; }
 .track-copy {
   flex: none; width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid #12805C; border-radius: 10px; background: #E6F4EE; color: #0A5C42; cursor: pointer; padding: 0; position: relative;
+  border: 1px solid #3366CC; border-radius: 10px; background: #E8EEFA; color: #1F3F7A; cursor: pointer; padding: 0; position: relative;
 }
-.track-copy:hover:not(:disabled) { background: #D2EBE0; }
+.track-copy:hover:not(:disabled) { background: #D5E0F6; }
 .track-copy:focus-visible { outline: 3px solid var(--primary, #4F66E0); outline-offset: 2px; }
 .track-copy:disabled { cursor: progress; }
 .track-copy.is-loading svg { visibility: hidden; }
 .track-copy.is-loading::after {
   content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%;
-  border: 2px solid rgba(10,92,66,.3); border-top-color: #0A5C42; animation: spin .7s linear infinite;
+  border: 2px solid rgba(31,63,122,.3); border-top-color: #1F3F7A; animation: spin .7s linear infinite;
 }
 /* Màn hẹp: bỏ dấu ✓✓ trong ô 'Đã thông báo' để chữ gọn tối đa 2 dòng, không tràn khỏi ô */
 @container (max-width: 459px) {
