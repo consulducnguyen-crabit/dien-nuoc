@@ -150,14 +150,17 @@ const OCR_TIMEOUT_MS = 60000;
  */
 /** Dịch mã lỗi OCR của server sang thông báo tiếng Việt; null nếu không có/không nhận ra detail. Chỉ trả chuỗi thuần (hiển thị bằng textContent). */
 export function describeOcrDetail(detail, hint) {
-  const extra = hint ? ` Chi tiết: ${hint}` : '';
+  // Nối nguyên văn lỗi gốc (đã làm sạch ở server) để người dùng/dev biết Google báo gì.
+  const extra = hint ? ` (Chi tiết từ Google: ${hint})` : '';
   switch (detail) {
     case 'drive_not_enabled':
       return 'Chưa bật dịch vụ Drive API trong Apps Script (Services > Drive API v2, hoặc dán lại appsscript.json) rồi Deploy phiên bản mới.';
     case 'no_permission':
       return 'Chưa cấp quyền Drive/Documents: chạy hàm testOcr trong editor, cấp quyền, rồi Deploy phiên bản mới.';
     case 'quota':
-      return 'Vượt hạn mức Google, thử lại sau.';
+      return `Vượt hạn mức Google, thử lại sau.${extra}`;
+    case 'rate_limited':
+      return `Google đang giới hạn tốc độ, vui lòng đợi vài chục giây rồi bấm Đọc ảnh lại${extra}`;
     case 'drive_rejected':
     case 'ocr_failed':
       return `Google từ chối đọc ảnh.${extra}`;

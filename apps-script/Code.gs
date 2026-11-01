@@ -522,6 +522,27 @@ function handleOcrImage_(body) {
 
 /** Upload blob lên Drive với OCR, đọc văn bản từ Doc tạm; file tạm luôn bị xoá trong finally. */
 function runDriveOcr_(blob, mime) {
+  var MAX_ATTEMPTS = 3;
+  for (var i = 0; ; i++) {
+    try {
+      return runDriveOcrOnce_(blob, mime); // file tạm của lần này đã được dọn trong finally trước khi retry
+    } catch (err) {
+      // Chỉ retry lỗi giới hạn tốc độ/lỗi tạm; quota ngày, quyền, bad request ném ngay.
+      if (i >= MAX_ATTEMPTS - 1 || !isRetryableOcrError_(err)) throw err;
+      Utilities.sleep(1000 * Math.pow(2, i)); // 1s, 2s => tổng chờ 3s
+    }
+  }
+}
+
+/** Lỗi tạm thời (giới hạn tốc độ/backend) đáng thử lại; quota ngày thật thì không. */
+var OCR_RATE_LIMIT_RE_ = /rate limit|user rate|too many requests|backend error|internal error|timed out/i;
+function isRetryableOcrError_(err) {
+  var m = String(err && err.message ? err.message : err);
+  if (/daily limit|quota exceeded/i.test(m)) return false;
+  return OCR_RATE_LIMIT_RE_.test(m);
+}
+
+function runDriveOcrOnce_(blob, mime) {
   var fileId = null;
   try {
     var title = 'ocr-tmp-' + Utilities.getUuid();
@@ -547,7 +568,10 @@ function classifyOcrError_(err) {
   var m = String(err && err.message ? err.message : err);
   if (/Drive is not defined/i.test(m)) return 'drive_not_enabled';
   if (/authorization|permission|scope|access not granted/i.test(m)) return 'no_permission';
-  if (/quota|rate limit|limit exceeded/i.test(m)) return 'quota';
+  // Quota ngày thật phải xét trước: "Daily Limit Exceeded" không phải lỗi tốc độ tạm thời.
+  if (/daily limit|quota exceeded/i.test(m)) return 'quota';
+  if (OCR_RATE_LIMIT_RE_.test(m)) return 'rate_limited';
+  if (/quota|limit exceeded/i.test(m)) return 'quota';
   if (/ocr|invalid|argument|mime/i.test(m)) return 'drive_rejected';
   return 'ocr_failed';
 }

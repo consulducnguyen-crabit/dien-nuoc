@@ -3,8 +3,10 @@
 
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export const MAX_SOURCE_BYTES = 8 * 1024 * 1024; // ảnh gốc tối đa 8MB
-const MAX_EDGE = 1600; // cạnh dài tối đa sau khi thu nhỏ
-const JPEG_QUALITY = 0.85;
+const MAX_EDGE = 1400; // cạnh dài tối đa sau khi thu nhỏ
+const JPEG_QUALITY = 0.8;
+const JPEG_QUALITY_LOW = 0.7; // dùng khi base64 > SOFT_BASE64_LEN
+const SOFT_BASE64_LEN = 1200000;
 const MAX_BASE64_LEN = 2500000; // khớp giới hạn ở Code.gs
 
 /** Lỗi kiểm tra ảnh phía trình duyệt, message tiếng Việt hiển thị trực tiếp. */
@@ -29,7 +31,7 @@ function loadImage(url) {
 }
 
 /**
- * Thu nhỏ ảnh (cạnh dài <= 1600px), nền trắng, xuất JPEG q0.85.
+ * Thu nhỏ ảnh (cạnh dài <= 1400px), nền trắng, xuất JPEG q0.8 (q0.7 nếu base64 > 1,2 triệu ký tự).
  * @param {string} objectUrl URL tạm của file (do nơi gọi tạo và thu hồi)
  * @returns {Promise<{base64: string, mime: 'image/jpeg'}>} base64 không kèm tiền tố data:
  */
@@ -46,8 +48,13 @@ export async function prepareImage(objectUrl) {
   ctx.fillStyle = '#fff'; // nền trắng cho PNG/WebP trong suốt (JPEG không có alpha)
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  let dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+  let base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  // Ảnh còn lớn thì nén mạnh hơn để giảm tải/nguy cơ Google từ chối.
+  if (base64.length > SOFT_BASE64_LEN) {
+    dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY_LOW);
+    base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  }
   if (!base64 || base64.length > MAX_BASE64_LEN) throw new ImageError('Ảnh sau khi nén vẫn quá lớn. Hãy chọn ảnh nhỏ hơn.');
   return { base64, mime: 'image/jpeg' };
 }

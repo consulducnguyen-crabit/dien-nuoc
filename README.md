@@ -56,7 +56,7 @@ Lưu ý: ảnh được gửi tới Google Drive của chủ Sheet để nhận 
 
 1. Trong editor Apps Script chọn hàm `testOcr` rồi bấm **Run** (không cần token); cấp quyền nếu được hỏi. Xem kết quả/lỗi thật ở **Execution log**.
 2. Sau khi sửa, luôn **Deploy > Manage deployments > Edit > New version**.
-3. Mã lỗi app hiển thị: `drive_not_enabled` = chưa bật Drive API v2; `no_permission` = chưa cấp quyền Drive/Documents; `quota` = vượt hạn mức Google, thử lại sau; `drive_rejected`/`ocr_failed` = Google từ chối ảnh (kèm chi tiết gốc, thử ảnh khác).
+3. Mã lỗi app hiển thị: `drive_not_enabled` = chưa bật Drive API v2; `no_permission` = chưa cấp quyền Drive/Documents; `rate_limited` = Google giới hạn tốc độ tạm thời (server đã tự thử lại 3 lần), đợi vài chục giây rồi bấm **Đọc ảnh** lại; `quota` = hết hạn mức theo ngày, không thử lại được ngay, hạn mức reset sau khoảng 24 giờ; mọi thông báo đều kèm "Chi tiết từ Google" là lỗi gốc đã làm sạch; `drive_rejected`/`ocr_failed` = Google từ chối ảnh (kèm chi tiết gốc, thử ảnh khác).
 
 ## 6. Kết nối app với Google Sheet
 
