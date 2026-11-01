@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hoá đơn Nhà</title>
+  <meta name="description" content="Quản lý hoá đơn điện, nước cho khách thuê.">
+  <meta name="theme-color" content="#5B7BEF">
+
+  <!-- Font Plus Jakarta Sans (có tiếng Việt) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Sprite icon dùng chung (bánh răng cho sidebar và nav đáy) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  </svg>
+  <div class="shell">
+    <!-- Sidebar (desktop) -->
+    <aside class="sidebar">
+      <div class="logo">Hoá đơn <strong>Nhà</strong></div>
+
+      <nav aria-label="Điều hướng chính">
+        <ul class="nav-list">
+          <li>
+            <a class="nav-link" href="#nhap" aria-current="page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Nhập tin nhắn</span>
+            </a>
+          </li>
+          <li>
+            <a class="nav-link" href="#thong-ke">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15v3M12 10v8M17 6v12"/></svg>
+              <span>Thống kê</span>
+            </a>
+          </li>
+          <li>
+            <a class="nav-link" href="#thong-bao">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+              <span>Thông báo</span>
+            </a>
+          </li>
+          <li>
+            <a class="nav-link" href="#cau-hinh">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-gear"/></svg>
+              <span>Cấu hình</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Thẻ trạng thái kết nối Google Sheets (nối dữ liệu thật ở phase sau) -->
+      <div class="sidebar-status">
+        <span class="text-sub">Google Sheets</span>
+        <strong id="connection-status">Chưa kết nối</strong>
+        <a class="btn btn-secondary btn-sm" href="#cau-hinh">Cấu hình</a>
+      </div>
+    </aside>
+
+    <!-- Nội dung chính -->
+    <main class="main" id="main">
+      <header class="main-header">
+        <div>
+          <p class="text-sub">Quản lý hoá đơn</p>
+          <h1 id="page-title" tabindex="-1">Nhập tin nhắn</h1>
+        </div>
+        <div class="main-header-actions">
+          <!-- Bộ chọn Kỳ: khung, nối chức năng ở Phase 2 -->
+          <label class="pill" for="period-input">
+            <span class="sr-only">Chọn kỳ (tháng)</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <input type="month" id="period-input">
+          </label>
+          <button type="button" class="icon-btn" aria-label="Cảnh báo căn chưa khớp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Vùng hiển thị trang; router sẽ đổ nội dung vào đây ở Phase 2 -->
+      <section id="view">
+        <div class="card">
+          <h2>Khung ứng dụng đã sẵn sàng</h2>
+          <p class="text-sub">Nội dung các trang sẽ được bổ sung ở các Phase sau.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Nav đáy cho mobile (<900px) -->
+  <nav class="bottom-nav" aria-label="Điều hướng chính (di động)">
+    <a href="#nhap" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Nhập</span>
+    </a>
+    <a href="#thong-ke">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15v3M12 10v8M17 6v12"/></svg>
+      <span>Thống kê</span>
+    </a>
+    <a href="#thong-bao">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      <span>Thông báo</span>
+    </a>
+    <a href="#cau-hinh">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-gear"/></svg>
+      <span>Cấu hình</span>
+    </a>
+  </nav>
+
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

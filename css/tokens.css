@@ -1,0 +1,27 @@
+:root {
+  /* nền tổng thể: gradient xanh periwinkle, đậm ở góc trên trái, tím nhạt ở góc dưới phải */
+  --bg-from: #5B7BEF;
+  --bg-to:   #8E86E6;
+  --surface:  #F4F6FF;   /* khung nội dung chính (container lớn bo góc) */
+  --card:     #FFFFFF;   /* thẻ */
+  --ink:      #1B2150;   /* chữ tiêu đề, navy tối */
+  --ink-2:    #5A6285;   /* chữ phụ (đảm bảo >= 4.5:1 trên trắng) */
+  --muted:    #8A93B2;   /* chỉ dùng cho icon/nhãn lớn, không dùng cho chữ nhỏ quan trọng */
+  --primary:  #4F66E0;   /* nút chính, link, mục sidebar đang chọn */
+  --primary-600: #3F54C8;/* hover */
+  --primary-50:  #E8ECFE;/* nền chip/nút phụ */
+  --navy:     #0E2A7B;   /* thẻ nhấn đậm (tổng tiền) */
+  --navy-2:   #1B3FA8;
+  --electric: #B26A00;   /* chữ nhãn Điện */
+  --electric-bg: #FFF1D6;
+  --water:    #1E55C8;   /* chữ nhãn Nước */
+  --water-bg: #E3EDFF;
+  --ok:       #12805C;   --ok-bg:  #DDF6EA;
+  --danger:   #C23A3F;   --danger-bg: #FFE6E7;
+  --radius-card: 20px;
+  --radius-shell: 28px;
+  --radius-pill: 999px;
+  --shadow-card: 0 8px 24px rgba(79,102,224,.10);
+  --shadow-lift: 0 14px 32px rgba(79,102,224,.18);
+  --ease: cubic-bezier(.2,.7,.2,1);
+}

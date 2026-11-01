@@ -1,0 +1,25 @@
+# Phụ thuộc và môi trường
+node_modules/
+.env
+.env.*
+*.local
+
+# Apps Script (clasp) - chứa scriptId, không commit
+.clasp.json
+.clasprc.json
+
+# Dữ liệu thật / bí mật - không commit
+*.secret
+*.key
+*.pem
+secrets/
+data/
+qr*.png
+qr*.webp
+
+# Hệ điều hành / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

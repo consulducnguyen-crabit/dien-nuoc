@@ -1,0 +1,60 @@
+// State tập trung + pub/sub đơn giản. Các trang đọc dữ liệu từ đây (Phase 4 chỉ cần ghi dữ liệu thật vào state).
+
+export const STORAGE_URL = 'hd_api_url';
+export const STORAGE_TOKEN = 'hd_api_token';
+
+/** Kỳ hiện tại dạng 'YYYY-MM' (theo giờ máy người dùng). */
+export function currentPeriod() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+const state = {
+  units: [],            // [{ name, elecSuffix, waterSuffix }]
+  config: {},           // bank_name, bank_holder, bank_account, transfer_template, ...
+  invoices: [],         // hoá đơn của mọi kỳ đã tải
+  period: currentPeriod(),
+  selectedUnit: '',     // căn đang chọn (Thống kê -> Thông báo)
+  // 'none' | 'unchecked' | 'checking' | 'ok' | 'error'
+  connection: 'none',
+  loading: false,       // đang tải getAll (hiện skeleton)
+  loaded: false,        // đã tải thành công ít nhất một lần
+};
+
+const listeners = new Set();
+
+export function getState() {
+  return state;
+}
+
+/** Gộp patch vào state; chỉ báo cho subscriber khi có khoá thật sự đổi. */
+export function setState(patch) {
+  const changed = [];
+  for (const [key, value] of Object.entries(patch)) {
+    if (state[key] !== value) {
+      state[key] = value;
+      changed.push(key);
+    }
+  }
+  if (changed.length) {
+    for (const fn of [...listeners]) fn(state, changed);
+  }
+}
+
+/** Đăng ký lắng nghe; trả về hàm huỷ đăng ký. fn(state, changedKeys). */
+export function subscribe(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+/** URL + token Apps Script lưu trong localStorage (không hard-code). */
+export function loadCredentials() {
+  try {
+    return {
+      url: localStorage.getItem(STORAGE_URL) || '',
+      token: localStorage.getItem(STORAGE_TOKEN) || '',
+    };
+  } catch {
+    return { url: '', token: '' }; // localStorage bị chặn (chế độ riêng tư...)
+  }
+}
