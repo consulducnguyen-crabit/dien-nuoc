@@ -3,15 +3,11 @@
 // (giữ nội dung đã dán / ảnh đã chọn / kết quả đang sửa).
 import { h, svg } from '../dom.js';
 import { getState, setState, subscribe } from '../state.js';
-import { formatPeriod, formatMoney, defaultDueDate } from '../format.js';
-import { renderDataGate, toast, setBusy } from '../ui.js';
-import { listMissing, summarizeUnit } from '../summary.js';
-import {
-  buildNoticeNode, loadHtmlToImage, renderNoticePng, noticeFileName, downloadDataUrl, copyPngToClipboard,
-} from '../notice.js';
-import { qrFromConfig } from '../qr.js';
-import { markNotified, ApiError } from '../api.js';
-import { withNotified, errorMessage } from '../data.js';
+import { formatPeriod, formatMoney } from '../format.js';
+import { renderDataGate } from '../ui.js';
+import { listMissing } from '../summary.js';
+import { loadHtmlToImage } from '../notice.js';
+import { KIND_NAME, copyIcon, isBusy, copyKindNotice } from '../notify-actions.js';
 
 // Khoá state ảnh hưởng tới thẻ này
 const WATCH = ['units', 'invoices', 'loaded', 'loading', 'period'];
@@ -34,73 +30,7 @@ function doubleMarkIcon() {
     }));
 }
 
-/** Icon "sao chép" (hai tờ giấy) cho nút trong ô. */
-function copyIcon() {
-  return svg('svg', { viewBox: '0 0 24 24', width: 20, height: 20, 'aria-hidden': 'true', focusable: 'false' },
-    svg('rect', { x: 9, y: 9, width: 11, height: 11, rx: 2, fill: 'none', stroke: 'currentColor', 'stroke-width': 2 }),
-    svg('path', { d: 'M5 15V6a2 2 0 0 1 2-2h9', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-}
-
-const KIND_NAME = { elec: 'điện', water: 'nước' };
-// Khoá hoá đơn đang tạo ảnh: nút bị khoá kể cả khi thẻ vẽ lại giữa chừng
-const busy = new Set();
 let repaint = () => {};
-
-/** Dựng ảnh thông báo RIÊNG một loại ở node ngoài màn hình (không dùng display:none để html-to-image vẫn render được). */
-async function makeImage(unit, kind) {
-  const { invoices, period, config } = getState();
-  const summary = summarizeUnit({ name: unit }, invoices, period);
-  const host = h('div', { 'aria-hidden': 'true', style: 'position:fixed;left:-9999px;top:0;width:420px;pointer-events:none' });
-  host.append(buildNoticeNode({ summary, period, dueDate: defaultDueDate(period), config, qrDataUrl: qrFromConfig(config), only: kind }));
-  document.body.append(host);
-  try {
-    return await renderNoticePng(host.firstElementChild);
-  } catch {
-    toast('Không tạo được ảnh. Kiểm tra kết nối Internet (cần tải thư viện xuất ảnh) rồi thử lại.', 'error');
-    return null;
-  } finally {
-    host.remove(); // luôn thu dọn node tạm
-  }
-}
-
-/** Lưu "đã thông báo" lên Sheet rồi cập nhật state. Lỗi không làm mất ảnh đã tạo (chỉ báo, ô giữ nguyên). */
-async function persistNotified(inv) {
-  if (!inv.key) return;
-  try {
-    await markNotified([inv.key], true);
-    setState({ invoices: withNotified(getState().invoices, [inv.key], new Date().toISOString()) });
-  } catch (err) {
-    toast(err instanceof ApiError && err.code === 'bad_request'
-      ? 'Cần cập nhật Apps Script (dán lại Code.gs và Deploy phiên bản mới) để lưu trạng thái "Đã thông báo". Ảnh vẫn dùng bình thường.'
-      : `Chưa lưu được trạng thái "Đã thông báo": ${errorMessage(err)}`, 'error');
-  }
-}
-
-/** Bấm nút: tạo ảnh, sao chép (hoặc tải file nếu không được) rồi đánh dấu đã thông báo. */
-async function onCopyClick(btn, unit, kind, inv) {
-  if (busy.has(inv.key)) return;
-  busy.add(inv.key);
-  setBusy(btn, true);
-  try {
-    // Gọi clipboard.write ngay trong click với Promise<dataUrl> (Safari yêu cầu cử chỉ người dùng); await sau
-    const urlPromise = makeImage(unit, kind);
-    const copied = await copyPngToClipboard(urlPromise);
-    const url = await urlPromise;
-    if (!url) return;
-    const name = `${KIND_NAME[kind]} ${unit}`;
-    if (copied) {
-      toast(`Đã sao chép ảnh thông báo ${name}, có thể dán vào Zalo hoặc Messenger.`, 'ok');
-    } else {
-      downloadDataUrl(url, noticeFileName(unit, getState().period, kind));
-      toast(`Trình duyệt không cho sao chép ảnh nên đã tải file thông báo ${name} về máy.`, 'info');
-    }
-    await persistNotified(inv);
-  } finally {
-    busy.delete(inv.key);
-    setBusy(btn, false);
-    repaint();
-  }
-}
 
 /** Một ô Điện/Nước. Màu + icon + chữ (không chỉ dựa vào màu); số tiền chỉ hiện khi đủ rộng (CSS).
  *  Ô đã có hoá đơn kèm nút sao chép ảnh thông báo riêng loại đó; đã thông báo thì ô đổi sang xanh đậm. */
@@ -112,7 +42,7 @@ function cell(unit, kind, inv) {
         markIcon(false), h('span', { class: 'track-word' }, 'Chưa')));
   }
   const notified = !!inv.notifiedAt;
-  const isBusy = busy.has(inv.key);
+  const loading = isBusy(inv);
   const status = h('span', {
     class: notified ? 'track-cell track-yes track-done' : 'track-cell track-yes',
     role: 'img',
@@ -123,12 +53,12 @@ function cell(unit, kind, inv) {
   inv.amount ? h('span', { class: 'track-amt' }, formatMoney(inv.amount)) : null);
   const btn = h('button', {
     type: 'button',
-    class: isBusy ? 'track-copy is-loading' : 'track-copy',
+    class: loading ? 'track-copy is-loading' : 'track-copy',
     'aria-label': `${notified ? 'Sao chép lại' : 'Sao chép'} ảnh thông báo ${KIND_NAME[kind]} ${unit}`,
     title: 'Sao chép ảnh thông báo',
-    disabled: isBusy,
-    'aria-busy': isBusy ? 'true' : null,
-    onClick: (e) => onCopyClick(e.currentTarget, unit, kind, inv),
+    disabled: loading,
+    'aria-busy': loading ? 'true' : null,
+    onClick: (e) => copyKindNotice(e.currentTarget, unit, kind, inv, () => repaint()),
   }, copyIcon());
   return h('td', { class: 'track-td' }, h('div', { class: 'track-box' }, status, btn));
 }

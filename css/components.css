@@ -182,6 +182,10 @@
 .card-empty:hover { transform: none; box-shadow: none; }
 .usage { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; flex-wrap: wrap; }
 .usage-main { display: flex; flex-direction: column; align-items: flex-end; }
+.usage-notify { flex: 0 0 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.notify-state { font-size: 13px; font-weight: 600; color: var(--muted, #5B6285); }
+.notify-state.is-done { color: #0A5C42; }
+.track-copy.usage-copy { min-height: 36px; }
 .table th[scope="row"] { text-align: left; font-size: 14px; font-weight: 700; color: var(--ink); padding: 12px; border-top: 1px solid #EEF0FA; }
 
 /* Hoá đơn kỳ (trang Nhập): ma trận căn x Điện/Nước; ô xanh = đã có, đỏ = chưa có.

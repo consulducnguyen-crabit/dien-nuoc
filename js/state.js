@@ -15,6 +15,7 @@ const state = {
   units: [],            // [{ name, elecSuffix, waterSuffix }]
   config: {},           // bank_name, bank_holder, bank_account, transfer_template, ...
   invoices: [],         // hoá đơn của mọi kỳ đã tải
+  notifiedRev: 0, // tăng mỗi lần chỉ đổi cờ 'đã thông báo' (router không dựng lại cả trang)
   period: defaultPeriod(),
   selectedUnit: '',     // căn đang chọn (Thống kê -> Thông báo)
   // 'none' | 'unchecked' | 'checking' | 'ok' | 'error'

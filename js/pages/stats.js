@@ -1,19 +1,37 @@
 // Trang Thống kê (#thong-ke), mục 8.2. Đọc units/invoices/period từ state (dữ liệu thật từ Google Sheets).
 import { h, icon } from '../dom.js';
-import { getState, setState } from '../state.js';
+import { getState, setState, subscribe } from '../state.js';
 import { formatMoney, formatNumber, formatDate, formatPeriod, invoiceKey } from '../format.js';
 import { toast, countEl, donut, setBusy, renderDataGate } from '../ui.js';
 import { deleteInvoice } from '../api.js';
 import { reloadAll, errorMessage } from '../data.js';
 import { summarizeUnit, STATUS_META } from '../summary.js';
+import { KIND_NAME, copyIcon, isBusy, copyKindNotice } from '../notify-actions.js';
+import { loadHtmlToImage } from '../notice.js';
 
-/** Một khối Điện/Nước trong thẻ căn. */
-function usageBlock(label, chipClass, inv) {
+let repaintCards = () => {};
+
+/** Một khối Điện/Nước trong thẻ căn: số liệu + trạng thái thông báo riêng loại này + nút sao chép ảnh. */
+function usageBlock(unit, kind, label, chipClass, inv, onDone) {
+  const notified = !!inv.notifiedAt;
+  const loading = isBusy(inv);
   return h('div', { class: 'usage' },
     h('span', { class: `chip ${chipClass}` }, label),
     h('div', { class: 'usage-main' },
       h('span', { class: 'num' }, `${formatNumber(inv.consumption)} ${inv.unitLabel}`),
       h('strong', { class: 'num' }, formatMoney(inv.amount)),
+    ),
+    h('div', { class: 'usage-notify' },
+      h('span', { class: notified ? 'notify-state is-done' : 'notify-state' }, notified ? '✓✓ Đã thông báo' : 'Chưa thông báo'),
+      h('button', {
+        type: 'button',
+        class: loading ? 'track-copy usage-copy is-loading' : 'track-copy usage-copy',
+        'aria-label': `${notified ? 'Sao chép lại' : 'Sao chép'} ảnh thông báo ${KIND_NAME[kind]} ${unit}`,
+        title: 'Sao chép ảnh thông báo',
+        disabled: loading,
+        'aria-busy': loading ? 'true' : null,
+        onClick: (e) => copyKindNotice(e.currentTarget, unit, kind, inv, onDone),
+      }, copyIcon()),
     ),
   );
 }
@@ -29,8 +47,8 @@ function unitCard(s) {
   const meta = STATUS_META[s.status];
   return h('div', { class: 'card' },
     h('div', { class: 'unit-head' }, h('h2', null, s.unit), h('span', { class: `chip ${meta.chip}` }, meta.label)),
-    s.elec && usageBlock('Điện', 'chip-elec', s.elec),
-    s.water && usageBlock('Nước', 'chip-water', s.water),
+    s.elec && usageBlock(s.unit, 'elec', 'Điện', 'chip-elec', s.elec, () => repaintCards()),
+    s.water && usageBlock(s.unit, 'water', 'Nước', 'chip-water', s.water, () => repaintCards()),
     h('div', { class: 'total-row' }, h('span', { class: 'text-sub' }, 'Tổng'), h('strong', { class: 'num' }, formatMoney(s.total))),
     h('button', {
       type: 'button', class: 'btn btn-sm',
@@ -140,10 +158,20 @@ export function render(container) {
     ),
   );
 
+  // Chỉ vẽ lại lưới thẻ căn khi hoá đơn đổi (vd. vừa sao chép ảnh ở trang Nhập hoặc ngay tại đây), giữ nguyên phần còn lại
+  const cardsGrid = h('div', { class: 'grid grid-3 grid-top' });
+  function paintCards() {
+    const st = getState();
+    cardsGrid.replaceChildren(...st.units.map((u) => unitCard(summarizeUnit(u, st.invoices, st.period))));
+  }
+  repaintCards = paintCards;
+  paintCards();
+  loadHtmlToImage().catch(() => {}); // nạp sẵn thư viện xuất ảnh để bấm nút là chụp ngay
+
   container.append(
     legend,
     navy,
-    h('div', { class: 'grid grid-3 grid-top' }, ...summaries.map(unitCard)),
+    cardsGrid,
     h('div', { class: 'card' },
       h('div', { class: 'card-head' },
         h('h2', null, `Tổng hợp ${formatPeriod(period)}`),
@@ -152,4 +180,6 @@ export function render(container) {
       table,
     ),
   );
+  const unsubscribe = subscribe((st, changed) => { if (changed.includes('invoices')) paintCards(); });
+  return () => { unsubscribe(); if (repaintCards === paintCards) repaintCards = () => {}; };
 }

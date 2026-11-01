@@ -142,7 +142,8 @@ subscribe((s, changed) => {
   if (!currentKey) return;
   const route = ROUTES[currentKey];
   // Dựng lại khi đổi kỳ, hoặc khi dữ liệu đổi/đang tải (chỉ các trang chỉ-đọc)
-  const dataChanged = changed.some((k) => DATA_KEYS.includes(k));
+  // Đổi riêng cờ 'đã thông báo' (notifiedRev) thì các trang tự vẽ lại phần của mình, không dựng lại cả trang
+  const dataChanged = !changed.includes('notifiedRev') && changed.some((k) => DATA_KEYS.includes(k));
   if ((changed.includes('period') || dataChanged) && route.rerenderOnPeriod) {
     renderRoute(currentKey, { moveFocus: false });
   }

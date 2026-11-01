@@ -21,6 +21,7 @@ Dữ liệu nằm trong Google Sheets, truy cập qua Apps Script Web App ([apps
 - Liên kết cài nhanh cấu hình (`#cai-nhanh=...`) để nhập URL + token trên thiết bị khác.
 - Thẻ "Hoá đơn kỳ ..." ở đầu trang Nhập: ma trận căn x Điện/Nước, xanh là đã có, đỏ là chưa có. Ô xanh có nút sao chép ảnh thông báo riêng từng loại, sau đó hiện "Đã thông báo" (lưu cột `notified_at` trong Sheet).
 - Kỳ: ô Kỳ là kỳ của hoá đơn, mặc định là tháng trước, tự chuyển sang kỳ vừa lưu sau khi Lưu. Ảnh thông báo hiển thị đúng kỳ đó, hạn đóng mặc định là ngày 10 của tháng kế tiếp.
+- Đồng bộ "Đã thông báo" giữa Nhập, Thống kê, Thông báo (từng loại điện/nước; logic chung ở js/notify-actions.js). Thống kê: mỗi khối Điện/Nước có trạng thái + nút sao chép. Thông báo: chọn Gộp/Chỉ điện/Chỉ nước, Tải PNG và Sao chép đều gắn cờ. state.notifiedRev báo router không dựng lại cả trang. Chưa commit, chưa kiểm tra trên trình duyệt thật.
 - Graphify: đồ thị cấu trúc ở [graphify-out/](graphify-out/) (đã đưa vào repo).
 
 ## 3. Kiểm tra gần nhất
