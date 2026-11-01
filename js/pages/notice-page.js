@@ -1,7 +1,7 @@
 // Trang Thông báo (#thong-bao), mục 8.3. Xem trước theo 3 biến thể, tải/sao chép PNG.
 import { h, icon } from '../dom.js';
 import { getState, setState } from '../state.js';
-import { formatPeriod } from '../format.js';
+import { formatPeriod, previousPeriod } from '../format.js';
 import { toast, setBusy, renderDataGate } from '../ui.js';
 import { summarizeUnit } from '../summary.js';
 import {
@@ -15,6 +15,11 @@ export function render(container) {
   const wanted = getState().selectedUnit;
   let unitName = units.some((u) => u.name === wanted) ? wanted : units[0]?.name || '';
   let summary = null;
+  // Thông báo hiển thị tháng trước kỳ chọn; hạn mặc định luôn là ngày 10 của kỳ ĐANG CHỌN (bỏ qua hạn trong tin điện)
+  const shownPeriod = previousPeriod(period) || period;
+  const defaultDue = /^\d{4}-\d{2}$/.test(period) ? `${period}-10` : '';
+  let dueEdited = false; // đã tự sửa tay thì không ghi đè khi đổi căn
+  const periodShort = (p) => formatPeriod(p).replace('Tháng ', '');
 
   const unitSelect = h('select', { id: 'notice-unit', class: 'select' },
     ...units.map((u) => h('option', { value: u.name, selected: u.name === unitName }, u.name)));
@@ -36,18 +41,18 @@ export function render(container) {
     summary = summarizeUnit({ name: unitName }, invoices, period);
     stage.replaceChildren();
     const none = summary.status === 'none';
-    const needDue = !none && !dueInput.value;
+    const needDue = !none && !dueInput.value; // chỉ xảy ra khi người dùng xoá trống ô hạn
     if (none) {
       stage.append(h('p', { class: 'empty-state' }, 'Chưa có hoá đơn kỳ này.'));
       hint.textContent = '';
     } else {
       stage.append(buildNoticeNode({ summary, period, dueDate: dueInput.value, config, qrDataUrl }));
       hint.textContent = needDue
-        ? 'Chọn hạn đóng trước khi xuất ảnh (tin nước không có hạn).'
-        : 'Có thể đổi hạn đóng nếu cần.';
+        ? 'Hạn đóng đang trống, hãy chọn ngày trước khi xuất ảnh.'
+        : 'Mặc định là ngày 10 của kỳ đang chọn, có thể đổi nếu cần.';
     }
     dueInput.disabled = none;
-    // Vô hiệu hoá nút xuất khi chưa có hoá đơn hoặc chưa có hạn đóng
+    // Vô hiệu hoá nút xuất khi chưa có hoá đơn hoặc ô hạn đóng bị xoá trống
     dlBtn.disabled = none || needDue;
     copyBtn.disabled = none || needDue;
   }
@@ -55,12 +60,12 @@ export function render(container) {
   function onUnitChange() {
     unitName = unitSelect.value;
     setState({ selectedUnit: unitName });
-    // Hạn mặc định lấy từ tin điện của căn mới; chỉ có nước thì để trống cho chủ nhà chọn
-    dueInput.value = summarizeUnit({ name: unitName }, invoices, period).dueDate || '';
+    // Đặt lại hạn mặc định (ngày 10 của kỳ chọn) trừ khi người dùng đã tự sửa tay
+    if (!dueEdited) dueInput.value = defaultDue;
     refresh();
   }
   unitSelect.addEventListener('change', onUnitChange);
-  dueInput.addEventListener('input', refresh);
+  dueInput.addEventListener('input', () => { dueEdited = true; refresh(); });
   /** Chụp ảnh thông báo đang xem trước; trả về data URL hoặc null (đã toast lỗi). */
   async function capture() {
     const node = stage.querySelector('.notice');
@@ -72,7 +77,8 @@ export function render(container) {
       return null;
     }
   }
-  const fileName = () => noticeFileName(unitName, period);
+  // Tên file theo tháng hiển thị trên ảnh (tháng trước kỳ chọn) cho khớp nội dung
+  const fileName = () => noticeFileName(unitName, shownPeriod);
 
   dlBtn.addEventListener('click', async () => {
     setBusy(dlBtn, true);
@@ -101,14 +107,14 @@ export function render(container) {
   // Nạp sẵn thư viện xuất ảnh khi vào trang (lỗi thì báo lại lúc bấm xuất)
   loadHtmlToImage().catch(() => {});
 
-  dueInput.value = unitName ? summarizeUnit({ name: unitName }, invoices, period).dueDate || '' : '';
+  dueInput.value = defaultDue;
 
   container.append(
     h('div', { class: 'grid grid-2 grid-top notice-layout' },
       h('div', { class: 'stack' },
         h('div', { class: 'card' },
           h('h2', null, 'Tuỳ chọn thông báo'),
-          h('p', { class: 'text-sub' }, `Kỳ: ${formatPeriod(period)} (đổi ở bộ chọn Kỳ phía trên)`),
+          h('p', { class: 'text-sub' }, `Kỳ chọn ${periodShort(period)} → thông báo tiền ${periodShort(shownPeriod)} (đổi ở bộ chọn Kỳ phía trên)`),
           h('div', { class: 'field mt' }, h('label', { for: 'notice-unit' }, 'Căn'), unitSelect),
           h('div', { class: 'field mt' }, h('label', { for: 'notice-due' }, 'Hạn đóng'), dueInput, hint),
           h('div', { class: 'actions mt' }, dlBtn, copyBtn),

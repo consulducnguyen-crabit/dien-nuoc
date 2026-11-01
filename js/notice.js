@@ -1,6 +1,6 @@
 // Dựng DOM ảnh thông báo (rộng cố định 420px) + xuất/sao chép PNG bằng html-to-image (nạp lười từ CDN).
 import { h } from './dom.js';
-import { formatMoney, formatNumber, formatNumberOrDash, formatDate, formatPeriod, transferContent } from './format.js';
+import { formatMoney, formatNumber, formatNumberOrDash, formatDate, formatPeriod, previousPeriod, transferContent } from './format.js';
 
 // Ghim đúng phiên bản (mục 3 của plan)
 const HTML_TO_IMAGE_URL = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js';
@@ -71,17 +71,19 @@ function kvRow(label, value) {
 /**
  * @param {object} o
  * @param {object} o.summary  kết quả summarizeUnit()
- * @param {string} o.period   'YYYY-MM'
+ * @param {string} o.period   'YYYY-MM' của kỳ đang chọn; ảnh hiển thị THÁNG TRƯỚC kỳ này
  * @param {string} o.dueDate  'YYYY-MM-DD' hoặc ''
  * @param {object} o.config   bank_name, bank_holder, bank_account, transfer_template
  * @param {string} [o.qrDataUrl] data URL ảnh QR (chỉ nhận data:image/)
  */
 export function buildNoticeNode({ summary, period, dueDate, config = {}, qrDataUrl = '' }) {
   const { elec, water } = summary;
+  // Thông báo thu tiền của tháng trước kỳ chọn: tiêu đề và nội dung CK dùng tháng này (dữ liệu lưu không đổi)
+  const shownPeriod = previousPeriod(period) || period;
   const node = h('div', { class: 'notice' },
     h('div', { class: 'notice-head' },
       h('p', { class: 'notice-title' }, 'THÔNG BÁO ĐÓNG TIỀN'),
-      h('p', null, `Căn ${summary.unit} · ${formatPeriod(period)}`),
+      h('p', null, `Căn ${summary.unit} · ${formatPeriod(shownPeriod)}`),
     ),
   );
 
@@ -115,7 +117,7 @@ export function buildNoticeNode({ summary, period, dueDate, config = {}, qrDataU
     ['Chủ tài khoản', config.bank_holder],
     ['Số tài khoản', config.bank_account],
   ].filter(([, v]) => v);
-  const content = transferContent(config.transfer_template, summary.unit, period);
+  const content = transferContent(config.transfer_template, summary.unit, shownPeriod);
   const lines = h('div', { class: 'notice-bank-lines' },
     ...bankRows.map(([l, v]) => kvRow(l, v)),
     kvRow('Nội dung', content),

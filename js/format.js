@@ -39,6 +39,16 @@ export function formatPeriod(period) {
   return m ? `Tháng ${Number(m[2])}/${m[1]}` : '';
 }
 
+/** Tháng liền trước của 'YYYY-MM' ('2026-11' -> '2026-10', '2026-01' -> '2025-12'); '' nếu không hợp lệ. */
+export function previousPeriod(period) {
+  const m = String(period ?? '').match(/^(\d{4})-(\d{1,2})$/);
+  if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return '';
+  let y = Number(m[1]);
+  let mo = Number(m[2]) - 1;
+  if (mo === 0) { y -= 1; mo = 12; }
+  return `${String(y).padStart(4, '0')}-${String(mo).padStart(2, '0')}`;
+}
+
 /** Khoá upsert của hoá đơn: 'period|UNIT|type' (mã căn luôn in hoa). */
 export function invoiceKey(period, unit, type) {
   return `${period}|${String(unit).toUpperCase()}|${type}`;

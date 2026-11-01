@@ -190,9 +190,12 @@
 .notice-title { font-size: 18px; font-weight: 800; letter-spacing: .02em; }
 .notice-block { padding: 14px 20px; border-bottom: 1px solid #EEF0FA; display: flex; flex-direction: column; gap: 6px; }
 .notice-block-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.notice-row { display: flex; justify-content: space-between; gap: 12px; }
-.notice-row span { color: var(--ink-2); }
-.notice-row strong { text-align: right; }
+.notice-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; line-height: 1.5; }
+/* Nhãn co được (có thể xuống dòng), giá trị không xuống dòng và không bị nén để khỏi chồng chữ */
+.notice-row span { color: var(--ink-2); flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.notice-row strong { text-align: right; white-space: nowrap; flex: 0 0 auto; line-height: 1.5; }
+/* Tắt tabular-nums trong ảnh: số/ký tự '→' '³' lệch font dự phòng khi chụp dễ bị đè chữ */
+.notice .num { font-variant-numeric: normal; }
 .notice-total { margin: 16px 20px; padding: 16px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, var(--navy), var(--navy-2)); display: flex; flex-direction: column; gap: 2px; }
 .notice-bank { padding: 0 20px 20px; display: flex; gap: 16px; align-items: center; justify-content: space-between; }
 .notice-bank-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
