@@ -1,7 +1,7 @@
 // Trang Thống kê (#thong-ke), mục 8.2. Đọc units/invoices/period từ state (dữ liệu thật từ Google Sheets).
 import { h, icon } from '../dom.js';
 import { getState, setState, subscribe } from '../state.js';
-import { formatMoney, formatNumber, formatDate, formatPeriod, invoiceKey } from '../format.js';
+import { formatMoney, formatNumber, formatPeriod, invoiceKey } from '../format.js';
 import { toast, countEl, donut, setBusy, renderDataGate } from '../ui.js';
 import { deleteInvoice } from '../api.js';
 import { reloadAll, errorMessage } from '../data.js';
@@ -55,7 +55,7 @@ function unitCard(s) {
 
 /** CSV tại client; BOM UTF-8 để Excel đọc đúng tiếng Việt. */
 function exportCsv(summaries, period) {
-  const head = ['Căn', 'Điện (kWh)', 'Tiền điện', 'Nước (m³)', 'Tiền nước', 'Tổng', 'Hạn TT điện', 'Trạng thái'];
+  const head = ['Căn', 'Điện (kWh)', 'Tiền điện', 'Nước (m³)', 'Tiền nước', 'Tổng', 'Trạng thái'];
   const lines = summaries.map((s) => [
     s.unit,
     s.elec ? s.elec.consumption : '',
@@ -63,7 +63,6 @@ function exportCsv(summaries, period) {
     s.water ? s.water.consumption : '',
     s.water ? s.water.amount : '',
     s.total,
-    formatDate(s.dueDate),
     STATUS_META[s.status].label,
   ]);
   const cell = (v) => {
@@ -128,7 +127,6 @@ export function render(container) {
       h('td', null, s.water ? formatNumber(s.water.consumption) : dash),
       h('td', null, s.water ? formatMoney(s.water.amount) : dash),
       h('td', null, s.status === 'none' ? dash : formatMoney(s.total)),
-      h('td', null, formatDate(s.dueDate) || dash),
       h('td', null, h('span', { class: `chip ${meta.chip}` }, meta.label)),
       h('td', null, h('div', { class: 'actions' },
         ...[['Điện', s.elec], ['Nước', s.water]].filter(([, inv]) => inv).map(([label, inv]) => {
@@ -144,7 +142,7 @@ export function render(container) {
     h('table', { class: 'table' },
       h('caption', { class: 'sr-only' }, `Tổng hợp hoá đơn ${formatPeriod(period)}`),
       h('thead', null, h('tr', null,
-        ...['Căn', 'Điện (kWh)', 'Tiền điện', 'Nước (m³)', 'Tiền nước', 'Tổng', 'Hạn TT điện', 'Trạng thái']
+        ...['Căn', 'Điện (kWh)', 'Tiền điện', 'Nước (m³)', 'Tiền nước', 'Tổng', 'Trạng thái']
           .map((t) => h('th', { scope: 'col' }, t)),
         h('th', { scope: 'col' }, h('span', { class: 'sr-only' }, 'Thao tác')))),
       tbody,
