@@ -50,13 +50,6 @@ function unitCard(s) {
     s.elec && usageBlock(s.unit, 'elec', 'Điện', 'chip-elec', s.elec, () => repaintCards()),
     s.water && usageBlock(s.unit, 'water', 'Nước', 'chip-water', s.water, () => repaintCards()),
     h('div', { class: 'total-row' }, h('span', { class: 'text-sub' }, 'Tổng'), h('strong', { class: 'num' }, formatMoney(s.total))),
-    h('button', {
-      type: 'button', class: 'btn btn-sm',
-      onClick: () => {
-        setState({ selectedUnit: s.unit });
-        location.hash = '#thong-bao';
-      },
-    }, 'Tạo thông báo'),
   );
 }
 
