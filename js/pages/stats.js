@@ -8,6 +8,7 @@ import { reloadAll, errorMessage } from '../data.js';
 import { summarizeUnit, STATUS_META } from '../summary.js';
 import { KIND_NAME, copyIcon, isBusy, copyKindNotice } from '../notify-actions.js';
 import { loadHtmlToImage } from '../notice.js';
+import { confirmDialog } from '../modal.js';
 
 let repaintCards = () => {};
 
@@ -82,7 +83,12 @@ function exportCsv(summaries, period) {
 
 /** Xoá một hoá đơn (xác nhận trước), rồi tải lại dữ liệu. */
 async function removeInvoice(inv, label, btn) {
-  if (!window.confirm(`Xoá hoá đơn ${label} của căn ${inv.unit} (${formatPeriod(inv.period)})?`)) return;
+  const ok = await confirmDialog({
+    title: 'Xoá hoá đơn?',
+    message: `Hoá đơn ${label} của căn ${inv.unit}, kỳ ${formatPeriod(inv.period)} sẽ bị xoá khỏi Google Sheets và không khôi phục được.`,
+    confirmText: 'Xoá hoá đơn',
+  });
+  if (!ok) return;
   setBusy(btn, true);
   try {
     await deleteInvoice(inv.key || invoiceKey(inv.period, inv.unit, inv.type));

@@ -6,6 +6,7 @@ import { formatMoney, formatNumber, formatNumberOrDash, formatDate, formatPeriod
 import { toast, setBusy, staggerIn } from '../ui.js';
 import { parseMessages, parseWaterReceiptText, parseVnNumber } from '../parser.js';
 import { matchUnit } from '../matcher.js';
+import { confirmDialog } from '../modal.js';
 import { saveInvoices, ocrImage, isConfigured } from '../api.js';
 import { validateImageFile, prepareImage, ImageError } from '../imageprep.js';
 import { reloadAll, invoiceToRow, errorMessage } from '../data.js';
@@ -453,7 +454,16 @@ export function render(container) {
     }
   });
 
-  clearBtn.addEventListener('click', () => {
+  clearBtn.addEventListener('click', async () => {
+    // Có nội dung hoặc kết quả đang có thì phải xác nhận trước khi xoá
+    if (textarea.value.trim() || rows.length || errors.length) {
+      const ok = await confirmDialog({
+        title: 'Xoá nội dung?',
+        message: 'Tin nhắn đã dán và kết quả nhận diện (kể cả phần đã sửa tay, chưa lưu) sẽ bị xoá.',
+        confirmText: 'Xoá nội dung',
+      });
+      if (!ok) return;
+    }
     textarea.value = '';
     rows = [];
     errors = [];
@@ -476,8 +486,14 @@ export function render(container) {
     const existing = new Set(getState().invoices.map((i) => invoiceKey(i.period, i.unit, i.type)));
     const dupes = [...payload.keys()].filter((k) => existing.has(k));
     if (dupes.length) {
-      const list = dupes.map((k) => k.replace(/\|/g, ' · ')).join('\n');
-      if (!window.confirm(`Đã có hoá đơn này, ghi đè?\n\n${list}`)) return;
+      const list = dupes.map((k) => k.replace(/\|/g, ' · '));
+      const ok = await confirmDialog({
+        title: 'Ghi đè hoá đơn?',
+        message: 'Các hoá đơn sau đã có trong Google Sheets, dữ liệu cũ sẽ bị thay bằng dữ liệu mới:',
+        details: list,
+        confirmText: 'Ghi đè',
+      });
+      if (!ok) return;
     }
     setBusy(saveBtn, true);
     try {

@@ -5,6 +5,7 @@ import { getState, setState, subscribe, loadCredentials } from '../state.js';
 import { transferContent } from '../format.js';
 import { matchUnit } from '../matcher.js';
 import { toast, setBusy } from '../ui.js';
+import { confirmDialog } from '../modal.js';
 import { qrFromConfig, qrToConfig, isImageDataUrl, QR_MAX_LENGTH } from '../qr.js';
 import { buildQuickSetupHash } from '../quicksetup.js';
 import { ping, saveUnits, saveConfig, saveConnection, isConfigured } from '../api.js';
@@ -84,7 +85,16 @@ export function render(container) {
       h('td', null, cellInput(row, 'waterSuffix', `Mã khớp nước, dòng ${i + 1}`)),
       h('td', null, h('button', {
         type: 'button', class: 'icon-btn icon-btn-flat', 'aria-label': `Xoá căn ${row.name || i + 1}`,
-        onClick: () => { rows.splice(i, 1); paintRows(); runMatchTest(); },
+        onClick: async () => {
+          const ok = await confirmDialog({
+            title: 'Xoá căn?',
+            message: `Căn ${row.name || i + 1} sẽ bị xoá khỏi danh sách. Thay đổi chỉ có hiệu lực sau khi bấm Lưu.`,
+            confirmText: 'Xoá căn',
+          });
+          const idx = rows.indexOf(row);
+          if (!ok || idx < 0) return;
+          rows.splice(idx, 1); paintRows(); runMatchTest();
+        },
       }, icon('trash'))),
     )));
   }
@@ -212,7 +222,13 @@ export function render(container) {
       toast('Không đọc được ảnh QR. Hãy thử file ảnh khác (PNG hoặc JPG).', 'error');
     }
   });
-  qrRemove.addEventListener('click', () => {
+  qrRemove.addEventListener('click', async () => {
+    const ok = await confirmDialog({
+      title: 'Xoá ảnh QR?',
+      message: 'Ảnh QR sẽ bị xoá khỏi ảnh thông báo sau khi bấm “Lưu tài khoản”.',
+      confirmText: 'Xoá QR',
+    });
+    if (!ok) return;
     qrUrl = '';
     qrDirty = true; // lưu sẽ ghi qr_parts = 0
     paintQr();
