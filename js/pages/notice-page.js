@@ -1,7 +1,7 @@
 // Trang Thông báo (#thong-bao), mục 8.3. Xem trước theo 3 biến thể, tải/sao chép PNG.
 import { h, icon } from '../dom.js';
 import { getState, setState } from '../state.js';
-import { formatPeriod, formatDate, defaultDueDate } from '../format.js';
+import { defaultDueDate } from '../format.js';
 import { toast, setBusy, renderDataGate } from '../ui.js';
 import { summarizeUnit } from '../summary.js';
 import {
@@ -20,7 +20,6 @@ export function render(container) {
   const shownPeriod = period;
   const defaultDue = defaultDueDate(period);
   let dueEdited = false; // đã tự sửa tay thì không ghi đè khi đổi căn
-  const periodShort = (p) => formatPeriod(p).replace('Tháng ', '');
 
   const unitSelect = h('select', { id: 'notice-unit', class: 'select' },
     ...units.map((u) => h('option', { value: u.name, selected: u.name === unitName }, u.name)));
@@ -69,9 +68,7 @@ export function render(container) {
       hint.textContent = '';
     } else {
       stage.append(buildNoticeNode({ summary, period, dueDate: dueInput.value, config, qrDataUrl, only: only || undefined }));
-      hint.textContent = needDue
-        ? 'Hạn đóng đang trống, hãy chọn ngày trước khi xuất ảnh.'
-        : 'Mặc định là ngày 10 của tháng kế tiếp sau kỳ đang chọn, có thể đổi nếu cần.';
+      hint.textContent = needDue ? 'Hạn đóng đang trống, hãy chọn ngày trước khi xuất ảnh.' : '';
     }
     dueInput.disabled = none;
     kindSelect.disabled = none;
@@ -145,7 +142,6 @@ export function render(container) {
       h('div', { class: 'stack' },
         h('div', { class: 'card' },
           h('h2', null, 'Tuỳ chọn thông báo'),
-          h('p', { class: 'text-sub' }, `Kỳ ${periodShort(period)}: thông báo tiền tháng ${periodShort(shownPeriod)}, hạn mặc định ${formatDate(defaultDue) || '—'} (đổi ở bộ chọn Kỳ phía trên)`),
           h('div', { class: 'field mt' }, h('label', { for: 'notice-unit' }, 'Căn'), unitSelect),
           h('div', { class: 'field mt' }, h('label', { for: 'notice-kind' }, 'Loại thông báo'), kindSelect),
           h('div', { class: 'field mt' }, h('label', { for: 'notice-due' }, 'Hạn đóng'), dueInput, hint),

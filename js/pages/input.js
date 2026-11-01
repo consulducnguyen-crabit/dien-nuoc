@@ -37,7 +37,6 @@ function fieldRows(inv) {
 }
 
 export function render(container) {
-  const { period } = getState();
   let rows = []; // [{ inv, unitName }] sau khi phân tích
   let errors = []; // lỗi phân tích (unrecognized / missing_field)
 
@@ -49,7 +48,6 @@ export function render(container) {
     h('span', null, 'Chưa tải được dữ liệu từ Google Sheets nên tạm khoá nút Lưu. ', h('a', { href: '#cau-hinh' }, 'Kiểm tra kết nối'), '.'));
 
   // ---- Thẻ trái: textarea ----
-  const periodLabel = h('strong', null, formatPeriod(period));
   const textarea = h('textarea', {
     id: 'msg-input', class: 'textarea textarea-mono', rows: 10,
     placeholder: 'Dán tin nhắn điện hoặc nước vào đây (có thể dán nhiều tin liên tiếp)…',
@@ -67,7 +65,6 @@ export function render(container) {
 
   // ---- Tab "Tải ảnh hoá đơn" (nước, OCR qua Google Drive) ----
   const fileInput = h('input', { type: 'file', id: 'receipt-file', class: 'input', accept: 'image/*' });
-  const captureChk = h('input', { type: 'checkbox', id: 'receipt-capture' });
   const preview = h('img', { class: 'receipt-preview', alt: 'Xem trước ảnh hoá đơn nước đã chọn', hidden: true });
   const readBtn = h('button', { type: 'button', class: 'btn', disabled: true }, h('span', { class: 'btn-label' }, 'Đọc ảnh'));
   const removeImgBtn = h('button', { type: 'button', class: 'btn btn-secondary', disabled: true }, 'Bỏ ảnh');
@@ -75,15 +72,13 @@ export function render(container) {
   const imgBlockNote = h('p', { class: 'note-warn' });
   const imagePanel = h('div', { role: 'tabpanel', id: 'panel-image', 'aria-labelledby': 'tab-image', class: 'mt', hidden: true },
     h('div', { class: 'field' },
-      h('label', { for: 'receipt-file' }, 'Ảnh hoá đơn nước (JPEG, PNG, WebP; tối đa 8 MB)'),
+      h('label', { for: 'receipt-file' }, 'Ảnh hoá đơn nước'),
       fileInput,
     ),
-    h('div', { class: 'check-row mt' }, captureChk, h('label', { for: 'receipt-capture' }, 'Mở camera sau khi chọn (trên điện thoại)')),
     h('div', { class: 'mt' }, preview),
     h('div', { class: 'actions mt' }, readBtn, removeImgBtn),
     imgBlockNote,
     imgStatus,
-    h('p', { class: 'text-sub mt' }, 'Ảnh được gửi tới Google Drive của chủ Sheet để nhận diện chữ rồi xoá ngay. Kết quả có thể sai, hãy kiểm tra lại trước khi lưu.'),
   );
 
   // ---- Tablist ----
@@ -117,7 +112,6 @@ export function render(container) {
 
   const inputCard = h('div', { class: 'card' },
     h('h2', null, 'Nhập hoá đơn'),
-    h('p', { class: 'text-sub' }, 'Kỳ đang chọn: ', periodLabel, ' (dùng cho hoá đơn nước đứng một mình; tin nước đi kèm tin điện cùng căn lấy kỳ của tin điện; ảnh nước có ghi kỳ thì lấy kỳ trong ảnh)'),
     h('div', { class: 'tablist mt', role: 'tablist', 'aria-label': 'Cách nhập hoá đơn' }, ...tabEls),
     pastePanel,
     imagePanel,
@@ -131,7 +125,6 @@ export function render(container) {
   const summaryLine = h('p', { class: 'text-sub mt', 'aria-live': 'polite' });
   const resultsCard = h('div', { class: 'card' },
     h('h2', null, 'Kết quả nhận diện'),
-    h('p', { class: 'text-sub' }, 'Chỉ dán 1 loại tin vẫn lưu được; loại còn lại bổ sung ở lần dán sau.'),
     // Chỉ dòng tóm tắt là aria-live; cả khối kết quả dài không được đọc lại mỗi lần đổi
     summaryLine,
     h('div', { class: 'mt' }, resultsBox),
@@ -413,11 +406,6 @@ export function render(container) {
     updateImageControls();
   }
 
-  captureChk.addEventListener('change', () => {
-    if (captureChk.checked) fileInput.setAttribute('capture', 'environment');
-    else fileInput.removeAttribute('capture');
-  });
-
   fileInput.addEventListener('change', () => {
     const file = fileInput.files && fileInput.files[0];
     revokePreview();
@@ -527,7 +515,6 @@ export function render(container) {
   const unsubscribe = subscribe((s, changed) => {
     if (changed.includes('loaded')) updateTotals(); // mở/khoá nút Lưu + cảnh báo theo trạng thái tải
     if (changed.includes('period')) {
-      periodLabel.textContent = formatPeriod(s.period);
       if (rows.length) renderItems(); // nhãn kỳ của tin nước phụ thuộc kỳ đang chọn
     }
     if (changed.includes('units') && rows.length) {
