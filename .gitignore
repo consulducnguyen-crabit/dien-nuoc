@@ -23,3 +23,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Graphify tự sinh, không đưa lên repo
+graphify-out/
