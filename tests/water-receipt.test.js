@@ -107,6 +107,66 @@ test('cảnh báo khi bảng tiền không khớp, không chặn', () => {
   assert.deepEqual(r.invoices[0].warnings, r.warnings);
 });
 
+// Văn bản OCR THẬT từ Google Drive: bảng bị đọc theo cột, nhãn và số tách xa nhau
+const REAL_COLUMNS = `09:00
+←
+Thanh toán 10 - 2026
+Mã khách hàng: TD475
+Chỉ số cũ: 506
+Tiêu thụ: 22 m3
+Chỉ số mới: 528
+33%
+Thông tin chi tiết
+SL (m3)
+Đơn giá (đ)
+22
+8.300
+Cộng
+22
+Giảm trừ đặc cọc
+Thuế GTGT
+Tổng tiền
+Thành tiền (đ)
+182.600
+182.600
+19.173
+9.130
+172.557
+Bằng chữ: Một trăm bảy mươi hai nghìn năm trăm năm
+mươi bảy đồng
+0000
+• Chưa thanh toán
+Thanh toán`;
+
+test('OCR thật đọc theo cột: suy số tiền từ dãy sau Thành tiền', () => {
+  const r = parseWaterReceiptText(REAL_COLUMNS);
+  assert.deepEqual(r.errors, []);
+  const i = r.invoices[0];
+  assert.equal(i.type, 'water');
+  assert.equal(i.customerCode, 'TD475');
+  assert.equal(i.period, '2026-10');
+  assert.equal(i.periodSource, 'image');
+  assert.equal(i.indexStart, 506);
+  assert.equal(i.indexEnd, 528);
+  assert.equal(i.consumption, 22);
+  assert.equal(i.amount, 172557);
+  assert.deepEqual(r.warnings, []);
+});
+
+test('OCR theo cột, thứ tự cột bị xáo: vẫn tìm bộ khớp công thức, kèm cảnh báo', () => {
+  const text = REAL_COLUMNS.replace('182.600\n182.600\n19.173\n9.130\n172.557', '19.173\n182.600\n9.130\n182.600\n172.557');
+  const r = parseWaterReceiptText(text);
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.invoices[0].amount, 172557);
+  assert.equal(r.warnings.length, 1);
+});
+
+test('OCR theo cột, không bộ nào khớp: lấy số cuối kèm cảnh báo', () => {
+  const r = parseWaterReceiptText(REAL_COLUMNS.replace('9.130', '9.139'));
+  assert.equal(r.invoices[0].amount, 172557);
+  assert.match(r.warnings[0], /kiểm tra lại/);
+});
+
 test('văn bản rỗng hoặc không liên quan', () => {
   assert.deepEqual(parseWaterReceiptText('').invoices, []);
   const r = parseWaterReceiptText('xin chào thế giới');

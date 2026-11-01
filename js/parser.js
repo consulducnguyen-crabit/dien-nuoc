@@ -150,6 +150,52 @@ function codeAfterLabel(lines, labelRe) {
 }
 
 /**
+ * Dự phòng khi OCR đọc bảng THEO CỘT (nhãn và số tách xa nhau): gom các số tiền dạng nhóm nghìn
+ * nằm sau tiêu đề cột 'Thành tiền' (hoặc sau 'Tổng tiền'/'Thuế') tới trước 'Bằng chữ'.
+ * Số không nhóm nghìn (22, 506, 33, 0000...) bị bỏ qua tự nhiên; đơn giá nằm trước tiêu đề cột.
+ * @returns {{amount, sub, discount, vat, warning}|null} null nếu < 4 số tiền
+ */
+function amountFromColumns(lines) {
+  let start = lines.findIndex((l) => /thanh tien/.test(l));
+  if (start < 0) {
+    const cand = lines.map((l, i) => (/^[^a-z0-9]*(tong tien|thue)\b/.test(l) ? i : -1)).filter((i) => i >= 0);
+    if (!cand.length) return null;
+    start = Math.min(...cand);
+  }
+  let end = lines.findIndex((l, i) => i > start && /bang chu/.test(l));
+  if (end < 0) end = lines.length;
+  const seq = [];
+  for (const l of lines.slice(start, end)) {
+    for (const t of numberTokens(l)) {
+      const fixed = t.replace(/[oO]/g, '0').replace(/[lI|iL]/g, '1').replace(/[.,]+$/, '');
+      if (/^\d{1,3}([.,]\d{3})+$/.test(fixed)) seq.push(ocrNumber(t));
+    }
+  }
+  if (seq.length < 4) return null;
+  // (a) 4 số cuối đúng thứ tự [cộng, giảm trừ, thuế, tổng]
+  const [c, g, v, T] = seq.slice(-4);
+  if (c - g + v === T) return { amount: T, sub: c, discount: g, vat: v, warning: null };
+  // (b) thứ tự cột bị xáo: tìm bộ a - g + t == T, ưu tiên T đứng muộn nhất trong dãy
+  for (let ti = seq.length - 1; ti >= 0; ti--) {
+    for (let ai = 0; ai < seq.length; ai++) {
+      for (let gi = 0; gi < seq.length; gi++) {
+        for (let vi = 0; vi < seq.length; vi++) {
+          if (new Set([ti, ai, gi, vi]).size < 4) continue;
+          if (seq[ai] - seq[gi] + seq[vi] === seq[ti] && seq[ai] >= seq[gi] && seq[ai] >= seq[ti]) {
+            return {
+              amount: seq[ti], sub: seq[ai], discount: seq[gi], vat: seq[vi],
+              warning: 'Tổng tiền suy ra từ bộ số khớp công thức (thứ tự cột bị xáo), hãy kiểm tra lại.',
+            };
+          }
+        }
+      }
+    }
+  }
+  // (c) không bộ nào khớp: lấy số cuối dãy
+  return { amount: seq[seq.length - 1], sub: null, discount: null, vat: null, warning: 'Tổng tiền suy ra từ thứ tự cột, hãy kiểm tra lại' };
+}
+
+/**
  * Phân tích văn bản OCR của ảnh hoá đơn nước (thuần). Chịu lỗi OCR: số cùng dòng hoặc dòng kế,
  * O/0, l/1, dấu '.'/',' ngăn nghìn, thứ tự dòng xáo trộn.
  * @returns {{invoices: object[], errors: object[], warnings: string[]}}
@@ -177,10 +223,20 @@ export function parseWaterReceiptText(text) {
   const indexEnd = valueAfterLabel(lines, /chi so moi\b\s*:?/);
   const consumption = valueAfterLabel(lines, /tieu thu\s*:?/);
   // Dòng bảng: số tiền là token cuối dòng (Cộng có thêm cột số lượng đứng trước)
-  const sub = valueAfterLabel(lines, /^[^a-z0-9]*cong\b/, 'last');
-  const discount = valueAfterLabel(lines, /^[^a-z0-9]*giam tru\b/, 'last');
-  const vat = valueAfterLabel(lines, /^[^a-z0-9]*thue\b/, 'last');
-  const amount = valueAfterLabel(lines, /^[^a-z0-9]*tong tien\b\s*:?/, 'last');
+  let sub = valueAfterLabel(lines, /^[^a-z0-9]*cong\b/, 'last');
+  let discount = valueAfterLabel(lines, /^[^a-z0-9]*giam tru\b/, 'last');
+  let vat = valueAfterLabel(lines, /^[^a-z0-9]*thue\b/, 'last');
+  let amount = valueAfterLabel(lines, /^[^a-z0-9]*tong tien\b\s*:?/, 'last');
+  // Đường ưu tiên: số ngay sau nhãn 'Tổng tiền'. Không có -> suy từ dãy số theo cột
+  let colWarning = null;
+  if (amount === null) {
+    const col = amountFromColumns(lines);
+    if (col) {
+      ({ amount, warning: colWarning } = col);
+      // Cộng/giảm trừ/thuế đọc theo nhãn có thể sai trong bố cục cột -> dùng bộ số đã đối chiếu
+      sub = col.sub; discount = col.discount; vat = col.vat;
+    }
+  }
 
   const inv = {
     type: 'water', customerCode, period, periodSource: period ? 'image' : null,
@@ -204,6 +260,7 @@ export function parseWaterReceiptText(text) {
   if ([sub, discount, vat].every((v) => v !== null) && sub - discount + vat !== amount) {
     inv.warnings.push('Bảng tiền không khớp (Cộng − Giảm trừ + Thuế ≠ Tổng tiền), có thể OCR đọc sai số.');
   }
+  if (colWarning) inv.warnings.push(colWarning);
   warnings.push(...inv.warnings);
   invoices.push(inv);
   return { invoices, errors, warnings };
