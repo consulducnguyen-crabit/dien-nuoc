@@ -182,7 +182,7 @@ Quy tắc số: ở tin nhắn của hai nhà cung cấp này, dấu `.` là **d
 ### 6.4 Kỳ (tháng) ghi nhận
 
 - Điện: `period = YYYY-MM` của **ngày kết thúc** kỳ (30/9/2026 → `2026-09`).
-- Nước: tin không ghi kỳ, dùng **kỳ đang chọn** ở bộ chọn Kỳ (mặc định tháng hiện tại, người dùng đổi được trước khi bấm Lưu).
+- Nước: tin không ghi kỳ, dùng **kỳ đang chọn** ở bộ chọn Kỳ (mặc định tháng trước của tháng hiện tại; sau khi Lưu tự chuyển sang kỳ vừa lưu; người dùng đổi được trước khi bấm Lưu).
 - Nếu tin điện có kỳ khác kỳ đang chọn, ưu tiên kỳ lấy từ tin và hiển thị cảnh báo nhỏ.
 
 ### 6.5 Kết quả trả về

@@ -1,7 +1,7 @@
 // Trang Nhập tin nhắn (#nhap), mục 8.1. Phase 2: kết quả "phân tích" là dữ liệu mẫu cố định.
 // Phase 4 chỉ cần thay makeSampleParseResult() bằng parseMessages() + matchUnit().
 import { h, icon } from '../dom.js';
-import { getState, subscribe } from '../state.js';
+import { getState, setState, subscribe } from '../state.js';
 import { formatMoney, formatNumber, formatNumberOrDash, formatDate, formatPeriod, invoiceKey } from '../format.js';
 import { toast, setBusy, staggerIn } from '../ui.js';
 import { parseMessages, parseWaterReceiptText, parseVnNumber } from '../parser.js';
@@ -477,9 +477,11 @@ export function render(container) {
     if (!getState().loaded || !rows.length || rows.some((r) => !r.unitName || rowIncomplete(r))) return;
     // Gộp theo key: nếu cùng key xuất hiện hai lần thì bản sau thắng (khớp hành vi server)
     const payload = new Map();
+    let latestPeriod = ''; // kỳ mới nhất trong lượt lưu: sau khi lưu sẽ chuyển ô Kỳ sang kỳ này
     for (const row of rows) {
       const { inv, unitName } = row;
       const { period } = periodOfRow(row);
+      if (period > latestPeriod) latestPeriod = period; // 'YYYY-MM' so sánh chuỗi đúng thứ tự thời gian
       payload.set(invoiceKey(period, unitName, inv.type), invoiceToRow(inv, period, unitName));
     }
     // Xác nhận ghi đè nếu key đã có trong state
@@ -499,13 +501,15 @@ export function render(container) {
       updateTotals();
       return;
     }
-    toast(`Đã lưu ${payload.size} hoá đơn vào Google Sheets.`, 'ok');
+    toast(`Đã lưu ${payload.size} hoá đơn vào Google Sheets. Đang xem kỳ ${formatPeriod(latestPeriod)}.`, 'ok');
     textarea.value = '';
     clearImage();
     rows = [];
     errors = [];
     setBusy(saveBtn, false);
     renderItems();
+    // Chuyển kỳ sang kỳ vừa lưu (main.js đồng bộ ô Kỳ ở header; Thống kê/Thông báo dựng lại theo kỳ mới), rồi tải lại dữ liệu
+    if (latestPeriod) setState({ period: latestPeriod });
     await reloadAll();
   });
 

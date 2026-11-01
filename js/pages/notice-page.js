@@ -1,7 +1,7 @@
 // Trang Thông báo (#thong-bao), mục 8.3. Xem trước theo 3 biến thể, tải/sao chép PNG.
 import { h, icon } from '../dom.js';
 import { getState, setState } from '../state.js';
-import { formatPeriod, previousPeriod } from '../format.js';
+import { formatPeriod, formatDate, defaultDueDate } from '../format.js';
 import { toast, setBusy, renderDataGate } from '../ui.js';
 import { summarizeUnit } from '../summary.js';
 import {
@@ -15,9 +15,9 @@ export function render(container) {
   const wanted = getState().selectedUnit;
   let unitName = units.some((u) => u.name === wanted) ? wanted : units[0]?.name || '';
   let summary = null;
-  // Thông báo hiển thị tháng trước kỳ chọn; hạn mặc định luôn là ngày 10 của kỳ ĐANG CHỌN (bỏ qua hạn trong tin điện)
-  const shownPeriod = previousPeriod(period) || period;
-  const defaultDue = /^\d{4}-\d{2}$/.test(period) ? `${period}-10` : '';
+  // Ảnh hiển thị đúng kỳ đang chọn; hạn mặc định = ngày 10 của THÁNG KẾ TIẾP sau kỳ (bỏ qua hạn trong tin điện)
+  const shownPeriod = period;
+  const defaultDue = defaultDueDate(period);
   let dueEdited = false; // đã tự sửa tay thì không ghi đè khi đổi căn
   const periodShort = (p) => formatPeriod(p).replace('Tháng ', '');
 
@@ -49,7 +49,7 @@ export function render(container) {
       stage.append(buildNoticeNode({ summary, period, dueDate: dueInput.value, config, qrDataUrl }));
       hint.textContent = needDue
         ? 'Hạn đóng đang trống, hãy chọn ngày trước khi xuất ảnh.'
-        : 'Mặc định là ngày 10 của kỳ đang chọn, có thể đổi nếu cần.';
+        : 'Mặc định là ngày 10 của tháng kế tiếp sau kỳ đang chọn, có thể đổi nếu cần.';
     }
     dueInput.disabled = none;
     // Vô hiệu hoá nút xuất khi chưa có hoá đơn hoặc ô hạn đóng bị xoá trống
@@ -60,7 +60,7 @@ export function render(container) {
   function onUnitChange() {
     unitName = unitSelect.value;
     setState({ selectedUnit: unitName });
-    // Đặt lại hạn mặc định (ngày 10 của kỳ chọn) trừ khi người dùng đã tự sửa tay
+    // Đặt lại hạn mặc định (ngày 10 tháng kế tiếp) trừ khi người dùng đã tự sửa tay
     if (!dueEdited) dueInput.value = defaultDue;
     refresh();
   }
@@ -77,7 +77,7 @@ export function render(container) {
       return null;
     }
   }
-  // Tên file theo tháng hiển thị trên ảnh (tháng trước kỳ chọn) cho khớp nội dung
+  // Tên file theo kỳ hiển thị trên ảnh cho khớp nội dung
   const fileName = () => noticeFileName(unitName, shownPeriod);
 
   dlBtn.addEventListener('click', async () => {
@@ -114,7 +114,7 @@ export function render(container) {
       h('div', { class: 'stack' },
         h('div', { class: 'card' },
           h('h2', null, 'Tuỳ chọn thông báo'),
-          h('p', { class: 'text-sub' }, `Kỳ chọn ${periodShort(period)} → thông báo tiền ${periodShort(shownPeriod)} (đổi ở bộ chọn Kỳ phía trên)`),
+          h('p', { class: 'text-sub' }, `Kỳ ${periodShort(period)}: thông báo tiền tháng ${periodShort(shownPeriod)}, hạn mặc định ${formatDate(defaultDue) || '—'} (đổi ở bộ chọn Kỳ phía trên)`),
           h('div', { class: 'field mt' }, h('label', { for: 'notice-unit' }, 'Căn'), unitSelect),
           h('div', { class: 'field mt' }, h('label', { for: 'notice-due' }, 'Hạn đóng'), dueInput, hint),
           h('div', { class: 'actions mt' }, dlBtn, copyBtn),

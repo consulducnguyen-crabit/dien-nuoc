@@ -1,19 +1,21 @@
 // State tập trung + pub/sub đơn giản. Các trang đọc dữ liệu từ đây (Phase 4 chỉ cần ghi dữ liệu thật vào state).
 
+import { previousPeriod } from './format.js';
+
 export const STORAGE_URL = 'hd_api_url';
 export const STORAGE_TOKEN = 'hd_api_token';
 
-/** Kỳ hiện tại dạng 'YYYY-MM' (theo giờ máy người dùng). */
-export function currentPeriod() {
+/** Kỳ mặc định khi mở app: THÁNG TRƯỚC của tháng hiện tại, dạng 'YYYY-MM' (theo giờ máy; xuất tháng sau cho tháng trước). */
+export function defaultPeriod() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return previousPeriod(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
 }
 
 const state = {
   units: [],            // [{ name, elecSuffix, waterSuffix }]
   config: {},           // bank_name, bank_holder, bank_account, transfer_template, ...
   invoices: [],         // hoá đơn của mọi kỳ đã tải
-  period: currentPeriod(),
+  period: defaultPeriod(),
   selectedUnit: '',     // căn đang chọn (Thống kê -> Thông báo)
   // 'none' | 'unchecked' | 'checking' | 'ok' | 'error'
   connection: 'none',

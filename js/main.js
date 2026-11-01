@@ -1,5 +1,5 @@
 // Điểm vào: router hash, bộ chọn Kỳ, trạng thái kết nối, điều hướng (sidebar + nav đáy).
-import { getState, setState, subscribe, currentPeriod } from './state.js';
+import { getState, setState, subscribe } from './state.js';
 import { isConfigured, isAllowedUrl, saveConnection } from './api.js';
 import { reloadAll, invalidateData } from './data.js';
 import { QUICK_PREFIX, parseQuickSetupHash } from './quicksetup.js';
@@ -122,8 +122,8 @@ applyQuickSetup();
 
 setState({ connection: isConfigured() ? 'unchecked' : 'none' });
 
-// ---- Bộ chọn Kỳ: mặc định tháng hiện tại, gắn với state ----
-periodInput.value = currentPeriod();
+// ---- Bộ chọn Kỳ: mặc định tháng trước (state.period), gắn với state ----
+periodInput.value = getState().period;
 function onPeriodChange() {
   const v = periodInput.value;
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(v)) return; // bỏ qua giá trị rỗng/không hợp lệ
@@ -136,6 +136,8 @@ periodInput.addEventListener('input', onPeriodChange);
 // ---- Lắng nghe state ----
 const DATA_KEYS = ['units', 'config', 'invoices', 'loading'];
 subscribe((s, changed) => {
+  // Kỳ đổi từ code (vd sau khi Lưu) thì đồng bộ ô Kỳ ở header
+  if (changed.includes('period') && periodInput.value !== s.period) periodInput.value = s.period;
   if (changed.includes('connection')) connectionEl.textContent = CONNECTION_TEXT[s.connection] || CONNECTION_TEXT.none;
   if (!currentKey) return;
   const route = ROUTES[currentKey];

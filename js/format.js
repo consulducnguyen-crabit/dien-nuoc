@@ -49,6 +49,22 @@ export function previousPeriod(period) {
   return `${String(y).padStart(4, '0')}-${String(mo).padStart(2, '0')}`;
 }
 
+/** Tháng liền sau của 'YYYY-MM' ('2026-10' -> '2026-11', '2026-12' -> '2027-01'); '' nếu không hợp lệ. */
+export function nextPeriod(period) {
+  const m = String(period ?? '').match(/^(\d{4})-(\d{1,2})$/);
+  if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return '';
+  let y = Number(m[1]);
+  let mo = Number(m[2]) + 1;
+  if (mo === 13) { y += 1; mo = 1; }
+  return `${String(y).padStart(4, '0')}-${String(mo).padStart(2, '0')}`;
+}
+
+/** Hạn đóng mặc định của kỳ: ngày 10 của tháng kế tiếp ('2026-10' -> '2026-11-10'); '' nếu kỳ không hợp lệ. */
+export function defaultDueDate(period) {
+  const next = nextPeriod(period);
+  return next ? `${next}-10` : '';
+}
+
 /** Khoá upsert của hoá đơn: 'period|UNIT|type' (mã căn luôn in hoa). */
 export function invoiceKey(period, unit, type) {
   return `${period}|${String(unit).toUpperCase()}|${type}`;
