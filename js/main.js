@@ -1,9 +1,10 @@
 // Điểm vào: router hash, bộ chọn Kỳ, trạng thái kết nối, điều hướng (sidebar + nav đáy).
 import { getState, setState, subscribe, currentPeriod } from './state.js';
-import { isConfigured } from './api.js';
-import { reloadAll } from './data.js';
+import { isConfigured, isAllowedUrl, saveConnection } from './api.js';
+import { reloadAll, invalidateData } from './data.js';
+import { QUICK_PREFIX, parseQuickSetupHash } from './quicksetup.js';
 import { h } from './dom.js';
-import { staggerIn, runCountUps } from './ui.js';
+import { staggerIn, runCountUps, toast } from './ui.js';
 import { render as renderInput } from './pages/input.js';
 import { render as renderStats } from './pages/stats.js';
 import { render as renderNotice } from './pages/notice-page.js';
@@ -93,6 +94,31 @@ function navigate() {
   }
   renderRoute(key, { moveFocus: true });
 }
+
+// ---- Liên kết cài nhanh: phải chạy TRƯỚC router/redirect và trước khi đọc isConfigured ----
+function applyQuickSetup() {
+  const hash = location.hash;
+  if (!hash.startsWith(QUICK_PREFIX)) return;
+  let ok = false;
+  const parsed = parseQuickSetupHash(hash);
+  if (parsed && isAllowedUrl(parsed.url)) {
+    try {
+      saveConnection(parsed.url, parsed.token);
+      ok = true;
+    } catch {
+      ok = false; // không log: lỗi có thể liên quan tới token
+    }
+  }
+  // Xoá token khỏi thanh địa chỉ/lịch sử ngay lập tức, dù thành công hay không
+  history.replaceState(null, '', `${location.pathname}${location.search}#${ok ? 'nhap' : 'cau-hinh'}`);
+  if (ok) {
+    invalidateData(); // đổi Sheet: bỏ dữ liệu cũ; reloadAll cuối file sẽ tải lại
+    toast('Đã nhập cấu hình từ liên kết cài nhanh', 'ok');
+  } else {
+    toast('Liên kết cài nhanh không hợp lệ hoặc bị hỏng. Chưa lưu gì.', 'error');
+  }
+}
+applyQuickSetup();
 
 setState({ connection: isConfigured() ? 'unchecked' : 'none' });
 

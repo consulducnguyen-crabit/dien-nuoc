@@ -48,6 +48,16 @@ Lưu ý quan trọng: mỗi lần sửa `Code.gs`, bạn phải **Deploy -> Mana
 2. Ở mục **Kết nối Google Sheets**: dán URL `/exec` và token ở bước 3.
 3. Bấm **Kiểm tra kết nối**. Chip trạng thái chuyển sang thành công là xong.
 
+### Liên kết cài nhanh cho điện thoại
+
+Để khỏi gõ URL và token trên điện thoại:
+
+1. Trên máy tính đã kết nối xong, vào **Cấu hình** > **Kết nối Google Sheets** > bấm **Tạo liên kết cài nhanh**, rồi **Sao chép liên kết**.
+2. Chuyển liên kết sang điện thoại bằng cách an toàn (ví dụ tự gửi qua ghi chú riêng tư), mở bằng trình duyệt: app tự lưu cấu hình và xoá token khỏi thanh địa chỉ.
+3. Sau đó dùng app bình thường. Có thể lưu liên kết làm dấu trang hoặc "Thêm vào màn hình chính" để cài lại khi mất dữ liệu trình duyệt.
+
+Lưu ý: liên kết chứa token (nằm sau dấu `#` nên không gửi lên máy chủ), nên KHÔNG gửi vào nhóm chat hay nơi công khai. Nếu liên kết bị lộ: vào Apps Script > Project Settings > Script Properties, đổi giá trị `API_TOKEN` sang chuỗi mới, rồi nhập lại token mới ở mọi thiết bị (liên kết cũ sẽ không còn dùng được).
+
 ## 7. Nhập dữ liệu ban đầu
 
 Trong màn **Cấu hình**:

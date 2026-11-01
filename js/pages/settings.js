@@ -6,6 +6,7 @@ import { transferContent } from '../format.js';
 import { matchUnit } from '../matcher.js';
 import { toast, setBusy } from '../ui.js';
 import { qrFromConfig, qrToConfig, isImageDataUrl, QR_MAX_LENGTH } from '../qr.js';
+import { buildQuickSetupHash } from '../quicksetup.js';
 import { ping, saveUnits, saveConfig, saveConnection, isConfigured } from '../api.js';
 import { reloadAll, invalidateData, unitToRow, errorMessage } from '../data.js';
 
@@ -276,6 +277,18 @@ export function render(container) {
   };
   paintStatus(state);
 
+  const quickBtn = h('button', { type: 'button', class: 'btn btn-secondary' }, 'Tạo liên kết cài nhanh');
+  const quickLink = h('input', { id: 'cfg-quick-link', class: 'input', type: 'text', readonly: '', autocomplete: 'off', spellcheck: 'false' });
+  const copyBtn = h('button', { type: 'button', class: 'btn btn-secondary' }, 'Sao chép liên kết');
+  const quickResult = h('div', { class: 'form-stack mt' },
+    h('div', { class: 'field' }, h('label', { for: 'cfg-quick-link' }, 'Liên kết cài nhanh'), quickLink),
+    h('p', { class: 'text-sub', role: 'alert' },
+      'Liên kết chứa token — chỉ lưu làm dấu trang hoặc thêm vào màn hình chính, KHÔNG gửi vào nhóm chat hay nơi công khai. Nếu lộ, đổi API_TOKEN trong Script Properties.'),
+    h('div', { class: 'actions' }, copyBtn),
+  );
+  quickResult.hidden = true;
+  const quickBox = h('div', { class: 'mt' }, quickBtn, quickResult);
+
   const connCard = h('div', { class: 'card' },
     h('div', { class: 'card-head' }, h('h2', null, 'Kết nối Google Sheets'), statusChip),
     h('div', { class: 'form-stack mt' },
@@ -284,7 +297,30 @@ export function render(container) {
       h('p', { class: 'text-sub' }, 'Hai giá trị này chỉ lưu trong trình duyệt của bạn (localStorage).'),
     ),
     h('div', { class: 'actions mt' }, saveConnBtn, testBtn),
+    quickBox,
   );
+
+  // Liên kết cài nhanh: chỉ dựng khi bấm, dùng URL/token ĐÃ LƯU (không lấy từ ô nhập chưa lưu)
+  quickBtn.disabled = !isConfigured();
+  quickBtn.addEventListener('click', () => {
+    const c = loadCredentials();
+    if (!isConfigured()) { toast('Hãy lưu kết nối hợp lệ trước.', 'error'); return; }
+    const link = location.origin + location.pathname + buildQuickSetupHash(c.url, c.token);
+    quickLink.value = link;
+    quickResult.hidden = false;
+    quickLink.focus();
+    quickLink.select();
+  });
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(quickLink.value);
+      toast('Đã sao chép liên kết.', 'ok');
+    } catch {
+      quickLink.focus();
+      quickLink.select(); // clipboard bị chặn: chọn sẵn để người dùng tự sao chép
+      toast('Không sao chép tự động được. Văn bản đã được chọn sẵn, hãy sao chép thủ công.', 'error');
+    }
+  });
 
   /** Lưu URL + token từ ô nhập; trả về true nếu hợp lệ (toast lỗi nếu không). */
   function storeCredentials() {
@@ -299,6 +335,8 @@ export function render(container) {
     // Đổi URL/token: bỏ dữ liệu của Sheet cũ; form Cấu hình được dựng lại (main.js) khi reloadAll thành công kế tiếp
     if (after.url !== before.url || after.token !== before.token) invalidateData();
     guide?.remove();
+    quickBtn.disabled = !isConfigured(); // vừa lưu xong thì bật nút tạo liên kết
+    quickResult.hidden = true; // liên kết cũ không còn đúng với thông tin mới
     return true;
   }
 

@@ -24,7 +24,7 @@ function readStore(key) {
 }
 
 /** URL hợp lệ: https, host script.google.com, đường dẫn đúng /macros/s/<id>/exec, không userinfo/port. */
-function isAllowedUrl(url) {
+export function isAllowedUrl(url) {
   try {
     const u = new URL(url);
     return u.protocol === 'https:' && ALLOWED_HOSTS.includes(u.hostname)
