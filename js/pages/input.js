@@ -133,7 +133,7 @@ export function render(container) {
   // ---- Thẻ tổng + lưu ----
   const totalsList = h('ul', { class: 'totals-list' });
   const grandTotal = h('strong', { class: 'num-xl' }, formatMoney(0));
-  const saveBtn = h('button', { type: 'button', class: 'btn', disabled: true }, 'Lưu vào Google Sheets');
+  const saveBtn = h('button', { type: 'button', class: 'btn', disabled: true }, 'Lưu hoá đơn');
   const multiPeriodWarn = h('div', { class: 'alert alert-warn', role: 'status', hidden: true }, icon('warn'),
     h('span', null));
   const totalsCard = h('div', { class: 'card' },
