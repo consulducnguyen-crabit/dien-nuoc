@@ -6,7 +6,7 @@ Repo: https://github.com/consulducnguyen-crabit/dien-nuoc. Trang chạy trên Gi
 ## 0. Chốt phiên (2026-11-01)
 
 - Git: `main` khớp `origin/main` tại `ec970df` (đã push). Cây làm việc sạch.
-- Test: 53/53 pass. Không có việc dở dang, không có agent nào còn chạy.
+- Test: 53/53 pass (`npm test`). Test giao diện Playwright: `npm run test:e2e` (thư mục `e2e/`, Edge có sẵn, Apps Script giả; 4 test xác nhận xoá).  Không có việc dở dang, không có agent nào còn chạy.
 - Việc làm đầu tiên ở phiên sau: xem mục 4 (Apps Script cần dán lại và Deploy New version; kiểm tra thực tế trên điện thoại sau khi xoá bộ nhớ đệm).
 
 ## 1. Tổng quan
@@ -26,7 +26,7 @@ Dữ liệu nằm trong Google Sheets, truy cập qua Apps Script Web App ([apps
 
 ## 3. Kiểm tra gần nhất
 
-- `node --test`: 53/53 pass.
+- `npm test` (`node --test tests`): 53/53 pass. `npm run test:e2e`: 4/4 pass (modal xác nhận xoá, thẻ Thống kê).
 - Cú pháp `js/**/*.js` và `Code.gs` (chép sang .js tạm rồi `node --check`): sạch.
 - Chưa có kiểm thử tự động trên trình duyệt (Playwright MCP không kết nối). Đã chụp thử thẻ theo dõi bằng Edge headless với dữ liệu giả.
 

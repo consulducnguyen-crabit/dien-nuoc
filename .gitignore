@@ -26,3 +26,8 @@ Thumbs.db
 
 # Graphify tự sinh, không đưa lên repo
 graphify-out/
+
+# Playwright
+test-results/
+playwright-report/
+.playwright-mcp/
