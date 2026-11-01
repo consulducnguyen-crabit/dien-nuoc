@@ -210,9 +210,16 @@
 .track-yes { background: #12805C; }
 .track-no { background: #C23A3F; }
 .track-mark { flex: none; }
-/* Ô đã có hoá đơn: trạng thái + nút sao chép ảnh thông báo cạnh nhau */
-.track-box { display: flex; gap: 4px; align-items: stretch; }
-.track-box .track-cell { flex: 1 1 auto; min-width: 0; }
+/* Ô đã có hoá đơn là nút bấm (cả ô) để sao chép ảnh thông báo */
+.track-btn { border: 0; width: 100%; font-family: inherit; cursor: pointer; position: relative; }
+.track-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.track-btn:focus-visible { outline: 3px solid var(--primary, #4F66E0); outline-offset: 2px; }
+.track-btn:disabled { cursor: progress; }
+.track-btn.is-loading > * { visibility: hidden; }
+.track-btn.is-loading::after {
+  content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; animation: spin .7s linear infinite;
+}
 /* Đã thông báo: xanh đậm hơn (#0A5C42 vs chữ trắng ~8.5:1) + viền sáng bên trong, vẫn thuộc nhóm xanh; cho xuống dòng ở màn hẹp */
 .track-done { background: #0A5C42; box-shadow: inset 0 0 0 2px #9FE8C9; white-space: normal; text-align: center; line-height: 1.15; gap: 4px; padding: 0 4px; font-size: 12px; }
 .track-copy {

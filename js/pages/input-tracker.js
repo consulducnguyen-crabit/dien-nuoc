@@ -7,7 +7,7 @@ import { formatPeriod, formatMoney } from '../format.js';
 import { renderDataGate } from '../ui.js';
 import { listMissing } from '../summary.js';
 import { loadHtmlToImage } from '../notice.js';
-import { KIND_NAME, copyIcon, isBusy, copyKindNotice } from '../notify-actions.js';
+import { KIND_NAME, isBusy, copyKindNotice } from '../notify-actions.js';
 
 // Khoá state ảnh hưởng tới thẻ này
 const WATCH = ['units', 'invoices', 'loaded', 'loading', 'period'];
@@ -32,8 +32,8 @@ function doubleMarkIcon() {
 
 let repaint = () => {};
 
-/** Một ô Điện/Nước. Màu + icon + chữ (không chỉ dựa vào màu); số tiền chỉ hiện khi đủ rộng (CSS).
- *  Ô đã có hoá đơn kèm nút sao chép ảnh thông báo riêng loại đó; đã thông báo thì ô đổi sang xanh đậm. */
+/** Một ô Điện/Nước. Màu + chữ (không chỉ dựa vào màu). Ô đã có hoá đơn là nút xanh ghi số tiền cần đóng:
+ *  bấm để sao chép ảnh thông báo riêng loại đó, xong đổi sang xanh đậm "Đã thông báo". */
 function cell(unit, kind, inv) {
   const label = kind === 'elec' ? 'Điện' : 'Nước';
   if (!inv) {
@@ -43,24 +43,23 @@ function cell(unit, kind, inv) {
   }
   const notified = !!inv.notifiedAt;
   const loading = isBusy(inv);
-  const status = h('span', {
-    class: notified ? 'track-cell track-yes track-done' : 'track-cell track-yes',
-    role: 'img',
-    'aria-label': `${unit}, ${label}: ${notified ? 'đã có, đã thông báo' : 'đã có, chưa thông báo'}`,
-  },
-  notified ? doubleMarkIcon() : markIcon(true),
-  h('span', { class: 'track-word' }, notified ? 'Đã thông báo' : 'Có'),
-  inv.amount ? h('span', { class: 'track-amt' }, formatMoney(inv.amount)) : null);
+  const action = notified ? 'Sao chép lại' : 'Sao chép';
+  // Cả ô là nút: bấm để tạo + sao chép ảnh thông báo riêng loại này, xong thì đổi sang "Đã thông báo"
   const btn = h('button', {
     type: 'button',
-    class: loading ? 'track-copy is-loading' : 'track-copy',
-    'aria-label': `${notified ? 'Sao chép lại' : 'Sao chép'} ảnh thông báo ${KIND_NAME[kind]} ${unit}`,
-    title: 'Sao chép ảnh thông báo',
+    class: `track-cell track-btn ${notified ? 'track-yes track-done' : 'track-yes'}${loading ? ' is-loading' : ''}`,
+    'aria-label': `${action} ảnh thông báo ${KIND_NAME[kind]} ${unit}, ${inv.amount ? `${formatMoney(inv.amount)}, ` : ''}${notified ? 'đã thông báo' : 'chưa thông báo'}`,
+    title: `${action} ảnh thông báo`,
     disabled: loading,
     'aria-busy': loading ? 'true' : null,
     onClick: (e) => copyKindNotice(e.currentTarget, unit, kind, inv, () => repaint()),
-  }, copyIcon());
-  return h('td', { class: 'track-td' }, h('div', { class: 'track-box' }, status, btn));
+  },
+  notified ? doubleMarkIcon() : null,
+  notified
+    ? h('span', { class: 'track-word' }, 'Đã thông báo')
+    : h('span', { class: 'track-word' }, inv.amount ? formatMoney(inv.amount) : 'Có'),
+  notified && inv.amount ? h('span', { class: 'track-amt' }, formatMoney(inv.amount)) : null);
+  return h('td', { class: 'track-td' }, btn);
 }
 
 /** Một hàng căn: tên căn (nút tạo thông báo nếu có ít nhất 1 loại) + 2 ô. */
