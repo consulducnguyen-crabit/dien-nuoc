@@ -8,10 +8,12 @@ const ALLOWED_HOSTS = ['script.google.com'];
 
 /** Lỗi API có mã máy đọc được (code) và thông điệp tiếng Việt thân thiện (message). */
 export class ApiError extends Error {
-  constructor(code, message) {
+  constructor(code, message, detail, hint) {
     super(message);
     this.name = 'ApiError';
     this.code = code;
+    this.detail = detail; // mã phân loại từ server (chỉ ocrImage)
+    this.hint = hint; // message gốc đã làm sạch từ server
   }
 }
 
@@ -121,7 +123,9 @@ export async function call(action, payload = {}, timeoutMs = TIMEOUT_MS) {
     if (code === 'bad_request') {
       throw new ApiError('bad_request', 'Dữ liệu gửi lên không hợp lệ. Hãy kiểm tra lại thông tin đã nhập.');
     }
-    throw new ApiError('server_error', 'Lỗi máy chủ Apps Script. Vui lòng thử lại sau.');
+    const detail = typeof data.detail === 'string' ? data.detail.slice(0, 50) : undefined;
+    const hint = typeof data.hint === 'string' ? data.hint.slice(0, 200) : undefined;
+    throw new ApiError('server_error', 'Lỗi máy chủ Apps Script. Vui lòng thử lại sau.', detail, hint);
   }
   const { ok, ...rest } = data;
   return rest;
@@ -144,11 +148,31 @@ const OCR_TIMEOUT_MS = 60000;
  * OCR ảnh qua Google Drive. base64 không kèm tiền tố data:; mime: image/jpeg | image/png | image/webp.
  * Trả { text }. Lỗi máy chủ thường do chưa bật Drive API / chưa cấp quyền Drive cho script.
  */
+/** Dịch mã lỗi OCR của server sang thông báo tiếng Việt; null nếu không có/không nhận ra detail. Chỉ trả chuỗi thuần (hiển thị bằng textContent). */
+export function describeOcrDetail(detail, hint) {
+  const extra = hint ? ` Chi tiết: ${hint}` : '';
+  switch (detail) {
+    case 'drive_not_enabled':
+      return 'Chưa bật dịch vụ Drive API trong Apps Script (Services > Drive API v2, hoặc dán lại appsscript.json) rồi Deploy phiên bản mới.';
+    case 'no_permission':
+      return 'Chưa cấp quyền Drive/Documents: chạy hàm testOcr trong editor, cấp quyền, rồi Deploy phiên bản mới.';
+    case 'quota':
+      return 'Vượt hạn mức Google, thử lại sau.';
+    case 'drive_rejected':
+    case 'ocr_failed':
+      return `Google từ chối đọc ảnh.${extra}`;
+    default:
+      return null;
+  }
+}
+
 export async function ocrImage(base64, mime) {
   try {
     return await call('ocrImage', { image: base64, mime }, OCR_TIMEOUT_MS);
   } catch (err) {
     if (err instanceof ApiError && err.code === 'server_error') {
+      const specific = describeOcrDetail(err.detail, err.hint);
+      if (specific) throw new ApiError('server_error', specific, err.detail, err.hint);
       throw new ApiError('server_error',
         'Không đọc được ảnh. Hãy kiểm tra đã bật Drive API (appsscript.json), cấp quyền Drive và Deploy phiên bản mới (xem README).');
     }

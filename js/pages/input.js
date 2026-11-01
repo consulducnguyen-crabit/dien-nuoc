@@ -453,8 +453,10 @@ export function render(container) {
         : 'Đọc xong nhưng chưa nhận diện được hoá đơn nước (xem phần Kết quả nhận diện).';
     } catch (err) {
       // Giữ ảnh đã chọn để thử lại
-      imgStatus.textContent = 'Không đọc được ảnh.';
-      toast(err instanceof ImageError ? err.message : errorMessage(err), 'error');
+      // Thông báo dài/cụ thể hiện cả ở vùng aria-live (textContent, không innerHTML) lẫn toast.
+      const msg = err instanceof ImageError ? err.message : errorMessage(err);
+      imgStatus.textContent = 'Không đọc được ảnh. ' + msg;
+      toast(msg, 'error');
     } finally {
       reading = false;
       setBusy(readBtn, false);

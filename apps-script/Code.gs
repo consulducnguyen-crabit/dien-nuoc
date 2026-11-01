@@ -83,6 +83,10 @@ function doPost(e) {
     if (code === 'server_error') {
       console.error('server_error: ' + (err && err.message ? err.message : err));
     }
+    // Chỉ ocrImage (đã qua kiểm token) mới trả detail/hint để người dùng biết nguyên nhân thật.
+    if (code === 'server_error' && err && err.ocrDetail) {
+      return json_({ ok: false, error: 'server_error', detail: err.ocrDetail, hint: err.ocrHint || '' });
+    }
     return json_({ ok: false, error: code });
   }
 }
@@ -503,14 +507,28 @@ function handleOcrImage_(body) {
   }
   if (!imageSignatureOk_(bytes, mime)) throw badRequest_('mime mismatch');
 
+  try {
+    return { text: runDriveOcr_(Utilities.newBlob(bytes, mime, 'ocr'), mime) };
+  } catch (err) {
+    // Gắn mã phân loại + message đã làm sạch để doPost trả cho client (không chứa dữ liệu ảnh).
+    var e2 = new Error('ocr failed');
+    e2.code = 'server_error';
+    e2.ocrDetail = classifyOcrError_(err);
+    e2.ocrHint = sanitizeOcrMessage_(err);
+    console.error('ocr ' + e2.ocrDetail + ': ' + e2.ocrHint);
+    throw e2;
+  }
+}
+
+/** Upload blob lên Drive với OCR, đọc văn bản từ Doc tạm; file tạm luôn bị xoá trong finally. */
+function runDriveOcr_(blob, mime) {
   var fileId = null;
   try {
-    var blob = Utilities.newBlob(bytes, mime, 'ocr');
     var title = 'ocr-tmp-' + Utilities.getUuid();
     var file = Drive.Files.insert({ title: title, mimeType: mime }, blob, { ocr: true, ocrLanguage: 'vi' });
     fileId = file.id;
     var text = DocumentApp.openById(fileId).getBody().getText();
-    return { text: String(text || '') };
+    return String(text || '');
   } finally {
     if (fileId) {
       try {
@@ -521,6 +539,39 @@ function handleOcrImage_(body) {
         }
       }
     }
+  }
+}
+
+/** Phân loại lỗi Drive/Document theo message (best-effort, không phụ thuộc cứng vào ngôn ngữ). */
+function classifyOcrError_(err) {
+  var m = String(err && err.message ? err.message : err);
+  if (/Drive is not defined/i.test(m)) return 'drive_not_enabled';
+  if (/authorization|permission|scope|access not granted/i.test(m)) return 'no_permission';
+  if (/quota|rate limit|limit exceeded/i.test(m)) return 'quota';
+  if (/ocr|invalid|argument|mime/i.test(m)) return 'drive_rejected';
+  return 'ocr_failed';
+}
+
+/** Làm sạch message gốc: bỏ URL, chuỗi dài giống token/ID, cắt 200 ký tự. */
+function sanitizeOcrMessage_(err) {
+  var m = String(err && err.message ? err.message : err);
+  m = m.replace(/https?:\/\/\S+/gi, '[url]').replace(/[A-Za-z0-9_\-+\/=]{25,}/g, '[id]');
+  return m.substring(0, 200);
+}
+
+/**
+ * Chạy tay trong trình soạn thảo (không cần token): chọn hàm testOcr rồi bấm Run,
+ * xem kết quả/lỗi thật ở "Execution log". Lần đầu sẽ hiện hộp thoại cấp quyền Drive/Documents.
+ */
+function testOcr() {
+  // PNG 1x1 hợp lệ; chỉ để kiểm tra Drive API + quyền, văn bản đọc ra có thể rỗng.
+  var png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  try {
+    var blob = Utilities.newBlob(Utilities.base64Decode(png), 'image/png', 'ocr-test');
+    var text = runDriveOcr_(blob, 'image/png');
+    Logger.log('OCR OK. Drive API + quyền hoạt động. Văn bản đọc được: "' + text + '"');
+  } catch (err) {
+    Logger.log('OCR LỖI [' + classifyOcrError_(err) + ']: ' + (err && err.message ? err.message : err));
   }
 }
 
