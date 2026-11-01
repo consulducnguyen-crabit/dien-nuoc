@@ -141,7 +141,9 @@ export const saveUnits = (units) => call('saveUnits', { units });
 /** config: object { key: value } chỉ gồm các key được phép (bank_*, transfer_template, qr_parts, qr_part_N). */
 export const saveConfig = (config) => call('saveConfig', { config });
 export const deleteInvoice = (key) => call('deleteInvoice', { key });
-export const setup = () => call('setup');
+/** Đánh dấu (notified=true) hoặc bỏ đánh dấu "đã thông báo"; keys: chuỗi 'YYYY-MM|CĂN|elec|water', tối đa 20. Server cũ -> bad_request. */
+export const markNotified = (keys, notified) => call('markNotified', { keys, notified });
+export const setup =() => call('setup');
 
 const OCR_TIMEOUT_MS = 60000;
 /**

@@ -19,8 +19,9 @@ var UNIT_HEADERS = ['unit_id', 'name', 'elec_suffix', 'water_suffix', 'sort'];
 var INVOICE_HEADERS = [
   'key', 'period', 'unit', 'type', 'customer_code', 'period_from', 'period_to',
   'index_start', 'index_end', 'consumption', 'unit_label', 'amount', 'due_date',
-  'raw_message', 'created_at', 'updated_at'
+  'raw_message', 'created_at', 'updated_at', 'notified_at'  // notified_at đặt CUỐI để Sheet cũ tương thích
 ];
+var MAX_NOTIFY_KEYS = 20;
 var CONFIG_HEADERS = ['key', 'value'];
 
 // Các cột số của Invoices/Units: định dạng số '0.###', còn lại ép text.
@@ -68,6 +69,7 @@ function doPost(e) {
       saveUnits: handleSaveUnits_,
       saveConfig: handleSaveConfig_,
       deleteInvoice: handleDeleteInvoice_,
+      markNotified: handleMarkNotified_,
       ocrImage: handleOcrImage_,
       setup: handleSetup_
     };
@@ -225,6 +227,52 @@ function guardFormulas_(range, rows, headers) {
   }
 }
 
+/** Chỉ số (0-based) các tiêu đề trong `headers` mà hàng tiêu đề hiện tại `head` còn thiếu/trống. Hàm thuần. */
+function missingHeaderIdx_(head, headers) {
+  var out = [];
+  for (var i = 0; i < headers.length; i++) {
+    if (head[i] === undefined || head[i] === null || head[i] === '') out.push(i);
+  }
+  return out;
+}
+
+/**
+ * Sheet Invoices cũ (chưa có cột notified_at): tự thêm tiêu đề cột còn thiếu, chèn cột nếu sheet hẹp hơn,
+ * đặt định dạng text '@'. Idempotent. PHẢI gọi trước mọi lần đọc/ghi Invoices (đọc vượt số cột sẽ ném lỗi).
+ * Gọi bên trong withLock_ (hoặc qua ensureInvoiceColumnsLocked_).
+ */
+function ensureInvoiceColumns_(sheet) {
+  var n = INVOICE_HEADERS.length;
+  if (sheet.getMaxColumns() < n) sheet.insertColumnsAfter(sheet.getMaxColumns(), n - sheet.getMaxColumns());
+  var head = sheet.getRange(1, 1, 1, n).getValues()[0];
+  var missing = missingHeaderIdx_(head, INVOICE_HEADERS);
+  missing.forEach(function (i) {
+    sheet.getRange(1, i + 1, sheet.getMaxRows(), 1).setNumberFormat(NUMERIC_COLS[INVOICE_HEADERS[i]] ? '0.###' : '@');
+    sheet.getRange(1, i + 1).setValue(INVOICE_HEADERS[i]).setFontWeight('bold');
+  });
+}
+
+/** Dùng cho đường đọc (getAll): chỉ xin khoá khi thật sự thiếu cột để không làm chậm lần đọc thường. */
+function ensureInvoiceColumnsLocked_(sheet) {
+  var n = INVOICE_HEADERS.length;
+  var head = sheet.getMaxColumns() < n ? [] : sheet.getRange(1, 1, 1, n).getValues()[0];
+  if (missingHeaderIdx_(head, INVOICE_HEADERS).length) {
+    withLock_(function () { ensureInvoiceColumns_(sheet); });
+  }
+}
+
+/**
+ * notified_at sau khi upsert: giữ giá trị cũ nếu amount và consumption không đổi; đổi một trong hai
+ * (hoá đơn thay đổi, cần thông báo lại) hoặc bản mới thì ''. oldRow là hàng cũ theo INVOICE_HEADERS (hoặc null).
+ */
+function keepNotifiedAt_(oldRow, inv) {
+  if (!oldRow) return '';
+  var ia = INVOICE_HEADERS.indexOf('amount');
+  var ic = INVOICE_HEADERS.indexOf('consumption');
+  var same = String(oldRow[ia]) === String(inv.amount) && String(oldRow[ic]) === String(inv.consumption);
+  return same ? (oldRow[INVOICE_HEADERS.indexOf('notified_at')] || '') : '';
+}
+
 function readRows_(sheet, headers) {
   var last = sheet.getLastRow();
   if (last < 2) return [];
@@ -346,7 +394,9 @@ function handleGetAll_(body) {
     if (r[0] !== '') config[String(r[0])] = String(r[1]);
   });
 
-  var invoices = readRows_(getSheet_(SHEET_INVOICES), INVOICE_HEADERS)
+  var invSheet = getSheet_(SHEET_INVOICES);
+  ensureInvoiceColumnsLocked_(invSheet);
+  var invoices = readRows_(invSheet, INVOICE_HEADERS)
     .filter(function (r) { return r[0] !== '' && (!period || r[1] === period); })
     .map(function (r) { return rowToObj_(INVOICE_HEADERS, r); });
 
@@ -375,6 +425,7 @@ function handleSaveInvoices_(body) {
 
   return withLock_(function () {
     var sheet = getSheet_(SHEET_INVOICES);
+    ensureInvoiceColumns_(sheet);
     var rows = readRows_(sheet, INVOICE_HEADERS);
     var rowIndex = {};
     rows.forEach(function (r, i) { rowIndex[r[0]] = i; });
@@ -387,6 +438,7 @@ function handleSaveInvoices_(body) {
       var created = idx >= 0 ? rows[idx][INVOICE_HEADERS.indexOf('created_at')] || ts : ts; // giữ created_at cũ
       inv.created_at = created;
       inv.updated_at = ts;
+      inv.notified_at = keepNotifiedAt_(idx >= 0 ? rows[idx] : null, inv); // client không gửi notified_at, server tự giữ/xoá
       var row = INVOICE_HEADERS.map(function (h) { return inv[h]; });
       if (idx >= 0) {
         rows[idx] = row;
@@ -467,11 +519,37 @@ function handleDeleteInvoice_(body) {
   if (typeof key !== 'string' || !RE_KEY.test(key)) throw badRequest_('bad key');
   return withLock_(function () {
     var sheet = getSheet_(SHEET_INVOICES);
+    ensureInvoiceColumns_(sheet);
     var rows = readRows_(sheet, INVOICE_HEADERS);
-    var kept = rows.filter(function (r) { return r[0] !== key; });
+    var kept =rows.filter(function (r) { return r[0] !== key; });
     var deleted = rows.length - kept.length;
     if (deleted > 0) writeBlock_(sheet, INVOICE_HEADERS, kept);
     return { deleted: deleted };
+  });
+}
+
+/** Đánh dấu / bỏ đánh dấu "đã thông báo" cho tối đa 20 hoá đơn: notified_at = giờ hiện tại hoặc ''. */
+function handleMarkNotified_(body) {
+  var keys = body.keys;
+  if (!Array.isArray(keys) || keys.length === 0 || keys.length > MAX_NOTIFY_KEYS) throw badRequest_('bad keys');
+  keys.forEach(function (k) {
+    if (typeof k !== 'string' || !RE_KEY.test(k)) throw badRequest_('bad key');
+  });
+  if (typeof body.notified !== 'boolean') throw badRequest_('bad notified');
+  return withLock_(function () {
+    var sheet = getSheet_(SHEET_INVOICES);
+    ensureInvoiceColumns_(sheet);
+    var rows = readRows_(sheet, INVOICE_HEADERS);
+    var ni = INVOICE_HEADERS.indexOf('notified_at');
+    var want = {};
+    keys.forEach(function (k) { want[k] = true; });
+    var ts = body.notified ? nowStr_() : '';
+    var updated = 0;
+    rows.forEach(function (r) {
+      if (want.hasOwnProperty(r[0])) { r[ni] = ts; updated++; }
+    });
+    if (updated > 0) writeBlock_(sheet, INVOICE_HEADERS, rows);
+    return { updated: updated };
   });
 }
 
@@ -618,6 +696,7 @@ function setupSheets_() {
       sheet = ss.insertSheet(d[0]);
       created.push(d[0]);
     }
+    if (d[0] === SHEET_INVOICES) ensureInvoiceColumns_(sheet); // Sheet cũ thiếu cột notified_at
     applyColumnFormats_(sheet, d[1]);
     var head = sheet.getRange(1, 1, 1, d[1].length);
     head.setNumberFormat('@').setValues([d[1]]).setFontWeight('bold');

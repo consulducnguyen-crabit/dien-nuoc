@@ -1,5 +1,6 @@
 // Dựng DOM ảnh thông báo (rộng cố định 420px) + xuất/sao chép PNG bằng html-to-image (nạp lười từ CDN).
 import { h } from './dom.js';
+import { narrowSummary } from './summary.js';
 import { formatMoney, formatNumber, formatNumberOrDash, formatDate, formatPeriod, transferContent } from './format.js';
 
 // Ghim đúng phiên bản (mục 3 của plan)
@@ -29,10 +30,11 @@ export async function renderNoticePng(node) {
   return lib.toPng(node, { pixelRatio: 2, backgroundColor: '#ffffff', cacheBust: false });
 }
 
-/** Tên file: thong-bao_{CĂN}_{YYYY-MM}.png (chỉ giữ ký tự an toàn). */
-export function noticeFileName(unit, period) {
+/** Tên file: thong-bao_{CĂN}_{YYYY-MM}[_dien|_nuoc].png (chỉ giữ ký tự an toàn; only để trống = ảnh gộp). */
+export function noticeFileName(unit, period, only) {
   const safe = String(unit).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
-  return `thong-bao_${safe}_${period}.png`;
+  const suffix = only === 'elec' ? '_dien' : only === 'water' ? '_nuoc' : '';
+  return `thong-bao_${safe}_${period}${suffix}.png`;
 }
 
 export function downloadDataUrl(dataUrl, fileName) {
@@ -75,8 +77,10 @@ function kvRow(label, value) {
  * @param {string} o.dueDate  'YYYY-MM-DD' hoặc ''
  * @param {object} o.config   bank_name, bank_holder, bank_account, transfer_template
  * @param {string} [o.qrDataUrl] data URL ảnh QR (chỉ nhận data:image/)
+ * @param {'elec'|'water'} [o.only] chỉ dựng khối của loại này và tính tổng riêng loại đó; bỏ trống = gộp như cũ
  */
-export function buildNoticeNode({ summary, period, dueDate, config = {}, qrDataUrl = '' }) {
+export function buildNoticeNode({ summary: fullSummary, period, dueDate, config = {}, qrDataUrl = '', only }) {
+  const summary = narrowSummary(fullSummary, only);
   const { elec, water } = summary;
   // Ô Kỳ = kỳ của hoá đơn: tiêu đề và nội dung CK dùng đúng kỳ này
   const shownPeriod = period;

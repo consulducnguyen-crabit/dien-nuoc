@@ -31,7 +31,14 @@ export function invoiceFromRow(r) {
     amount: num(r.amount),
     dueDate: str(r.due_date),
     rawMessage: str(r.raw_message),
+    notifiedAt: str(r.notified_at), // '' = chưa thông báo; chỉ đọc, KHÔNG gửi lại qua saveInvoices (server tự giữ/xoá)
   };
+}
+
+/** Trả mảng hoá đơn mới với notifiedAt của các key đã chọn đặt thành ts (chuỗi rỗng = bỏ đánh dấu). Thuần. */
+export function withNotified(invoices, keys, ts) {
+  const set = new Set(keys);
+  return (invoices || []).map((i) => (set.has(i.key) ? { ...i, notifiedAt: ts } : i));
 }
 
 /** camelCase (+ period, unit đã xác định) -> object snake_case gửi saveInvoices. */

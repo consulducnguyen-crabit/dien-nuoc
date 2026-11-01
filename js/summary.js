@@ -31,6 +31,21 @@ export function summarizeUnit(unit, invoices, period) {
 }
 
 /**
+ * Thu hẹp summary về một loại ('elec'|'water') cho ảnh thông báo riêng: bỏ loại kia và tính lại total.
+ * Không truyền only (hoặc giá trị lạ) thì trả nguyên summary (ảnh gộp như trang Thông báo).
+ */
+export function narrowSummary(summary, only) {
+  if (only !== 'elec' && only !== 'water') return summary;
+  const keep = summary[only] || null;
+  return {
+    ...summary,
+    elec: only === 'elec' ? keep : null,
+    water: only === 'water' ? keep : null,
+    total: keep?.amount || 0,
+  };
+}
+
+/**
  * Theo dõi hoá đơn từng căn trong một kỳ. Dựa hoàn toàn vào summarizeUnit nên khớp trang Thống kê.
  * rows: mỗi căn kèm `missing` (['điện'|'nước']); căn thiếu xếp trước, giữ thứ tự gốc trong từng nhóm.
  * @returns {{rows: object[], fullCount: number, total: number, summary: string}}

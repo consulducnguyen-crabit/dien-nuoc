@@ -42,6 +42,15 @@ Cấu trúc: `index.html`, `css/`, `js/`, `apps-script/` (gồm `Code.gs`, `apps
 
 Lưu ý quan trọng: mỗi lần sửa `Code.gs`, bạn phải **Deploy -> Manage deployments -> biểu tượng bút chì -> Version: New version -> Deploy**. Nếu không, URL vẫn chạy mã cũ. (Chọn "Anyone" vẫn an toàn vì mọi yêu cầu đều phải kèm `API_TOKEN`.)
 
+### Trạng thái "Đã thông báo" (cập nhật từ bản cũ)
+
+Ở trang Nhập, mỗi ô hoá đơn đã có (xanh) có nút sao chép ảnh thông báo riêng điện/nước; sau khi sao chép hoặc tải ảnh, ô chuyển sang "Đã thông báo" và được lưu vào Sheet (cột `notified_at`). Để dùng được:
+
+1. Dán lại toàn bộ `apps-script/Code.gs` mới.
+2. **Deploy -> Manage deployments -> biểu tượng bút chì -> Version: New version -> Deploy** (URL giữ nguyên).
+
+Sheet `Invoices` cũ tự được thêm cột `notified_at` ở lần gọi kế tiếp (không cần sửa tay). Khi sửa số tiền hoặc lượng tiêu thụ của một hoá đơn đã thông báo, trạng thái tự về "chưa thông báo". Nếu chưa cập nhật Apps Script, app báo "Cần cập nhật Apps Script" nhưng vẫn sao chép/tải ảnh bình thường (chỉ không lưu được trạng thái).
+
 ### Bật đọc ảnh hoá đơn nước (OCR qua Google Drive)
 
 Tab **Tải ảnh hoá đơn** ở trang Nhập cần Drive API. Khi cập nhật từ bản cũ:
