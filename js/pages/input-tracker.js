@@ -1,44 +1,59 @@
-// Thẻ "Theo dõi hoá đơn kỳ ..." ở đầu trang Nhập. Tự subscribe state và chỉ dựng lại chính nó,
-// KHÔNG đụng phần còn lại của trang (giữ nội dung đã dán / ảnh đã chọn / kết quả đang sửa).
-import { h } from '../dom.js';
+// Thẻ "Hoá đơn kỳ ..." ở đầu trang Nhập: ma trận căn x (Điện | Nước), ô xanh = đã có, ô đỏ = chưa có.
+// Tự subscribe state và chỉ dựng lại chính nó, KHÔNG đụng phần còn lại của trang
+// (giữ nội dung đã dán / ảnh đã chọn / kết quả đang sửa).
+import { h, svg } from '../dom.js';
 import { getState, setState, subscribe } from '../state.js';
-import { formatPeriod } from '../format.js';
+import { formatPeriod, formatMoney } from '../format.js';
 import { renderDataGate } from '../ui.js';
-import { listMissing, STATUS_META } from '../summary.js';
+import { listMissing } from '../summary.js';
 
 // Khoá state ảnh hưởng tới thẻ này
 const WATCH = ['units', 'invoices', 'loaded', 'loading', 'period'];
 
-/** Một dòng căn: tên, chip Điện/Nước, nhãn tổng (STATUS_META như trang Thống kê), dòng "Còn thiếu", nút tạo thông báo. */
+/** Dấu ✓ / ✕ vẽ bằng SVG inline (trang trí; nghĩa nằm ở chữ + aria-label của ô). */
+function markIcon(ok) {
+  return svg('svg', { class: 'track-mark', viewBox: '0 0 16 16', width: 16, height: 16, 'aria-hidden': 'true', focusable: 'false' },
+    svg('path', {
+      d: ok ? 'M3 8.5l3.2 3.2L13 4.8' : 'M4 4l8 8M12 4l-8 8',
+      fill: 'none', stroke: 'currentColor', 'stroke-width': 2.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    }));
+}
+
+/** Một ô Điện/Nước. Màu + icon + chữ (không chỉ dựa vào màu); số tiền chỉ hiện khi đủ rộng (CSS). */
+function cell(unit, label, inv) {
+  return h('td', { class: 'track-td' },
+    h('span', {
+      class: inv ? 'track-cell track-yes' : 'track-cell track-no',
+      role: 'img',
+      'aria-label': `${unit}, ${label}: ${inv ? 'đã có' : 'chưa có'}`,
+    },
+    markIcon(!!inv),
+    h('span', { class: 'track-word' }, inv ? 'Có' : 'Chưa'),
+    inv && inv.amount ? h('span', { class: 'track-amt' }, formatMoney(inv.amount)) : null));
+}
+
+/** Một hàng căn: tên căn (nút tạo thông báo nếu có ít nhất 1 loại) + 2 ô. */
 function unitRow(r) {
-  const meta = STATUS_META[r.status];
-  const chipFor = (label, inv, haveClass) => (inv
-    ? h('span', { class: `chip ${haveClass}` }, `${label}: có`)
-    : h('span', { class: 'chip chip-danger' }, `${label}: chưa có`));
-  return h('li', { class: r.missing.length ? 'track-row track-missing' : 'track-row' },
-    h('strong', { class: 'track-unit' }, r.unit),
-    h('span', { class: 'track-chips' },
-      chipFor('Điện', r.elec, 'chip-elec'),
-      chipFor('Nước', r.water, 'chip-water'),
-      h('span', { class: `chip ${meta.chip}` }, meta.label)),
-    r.missing.length ? h('span', { class: 'track-gap' }, `Còn thiếu: ${r.missing.join(', ')}`) : null,
-    r.status !== 'none'
-      ? h('button', {
-        type: 'button', class: 'btn btn-secondary btn-sm', 'aria-label': `Tạo thông báo cho căn ${r.unit}`,
-        onClick: () => {
-          setState({ selectedUnit: r.unit });
-          location.hash = '#thong-bao';
-        },
-      }, 'Tạo thông báo')
-      : null,
-  );
+  const nameNode = r.status !== 'none'
+    ? h('button', {
+      type: 'button', class: 'track-unit-btn', title: 'Tạo thông báo', 'aria-label': `Tạo thông báo cho căn ${r.unit}`,
+      onClick: () => {
+        setState({ selectedUnit: r.unit });
+        location.hash = '#thong-bao';
+      },
+    }, r.unit)
+    : h('span', { class: 'track-unit-name' }, r.unit);
+  return h('tr', null,
+    h('th', { scope: 'row', class: 'track-th' }, nameNode),
+    cell(r.unit, 'Điện', r.elec),
+    cell(r.unit, 'Nước', r.water));
 }
 
 /** Dựng thẻ vào container; trả về hàm dọn (huỷ subscribe). */
 export function mountTracker(container) {
   const root = h('div', { class: 'track' });
   // Vùng aria-live giữ nguyên node qua các lần vẽ lại (node bị thay mới thì trình đọc không đọc lại)
-  const summaryEl = h('p', { class: 'track-summary', role: 'status', 'aria-live': 'polite' });
+  const summaryEl = h('span', { class: 'track-summary', role: 'status', 'aria-live': 'polite' });
   container.append(root);
 
   function paint() {
@@ -49,15 +64,25 @@ export function mountTracker(container) {
       root.replaceChildren(...gate.childNodes);
       return;
     }
-    const { rows, summary } = listMissing(state.units, state.invoices, state.period);
+    const { rows, fullCount, total } = listMissing(state.units, state.invoices, state.period);
+    // Giữ thứ tự căn như cấu hình (listMissing xếp căn thiếu lên trước -> khôi phục lại cho ma trận ổn định)
+    const order = new Map((state.units || []).map((u, i) => [String(u.name).toUpperCase(), i]));
+    const ordered = [...rows].sort((a, b) => order.get(a.unit) - order.get(b.unit));
+    const text = `${fullCount}/${total} căn đủ`;
     // Chỉ gán khi đổi để không đọc lại thông báo giống hệt
-    if (summaryEl.textContent !== summary) summaryEl.textContent = summary;
+    if (summaryEl.textContent !== text) summaryEl.textContent = text;
+    const period = formatPeriod(state.period);
     root.replaceChildren(h('div', { class: 'card' },
-      h('div', { class: 'card-head' },
-        h('h2', null, `Theo dõi hoá đơn kỳ ${formatPeriod(state.period)}`)),
-      summaryEl,
-      h('ul', { class: 'track-list', 'aria-label': `Trạng thái hoá đơn từng căn ${formatPeriod(state.period)}` },
-        ...rows.map(unitRow)),
+      h('div', { class: 'card-head track-head' },
+        h('h2', null, `Hoá đơn kỳ ${period}`),
+        summaryEl),
+      h('table', { class: 'track-table' },
+        h('caption', { class: 'sr-only' }, `Trạng thái hoá đơn điện, nước từng căn kỳ ${period}`),
+        h('thead', null, h('tr', null,
+          h('th', { scope: 'col' }, h('span', { class: 'sr-only' }, 'Căn')),
+          h('th', { scope: 'col' }, 'Điện'),
+          h('th', { scope: 'col' }, 'Nước'))),
+        h('tbody', null, ...ordered.map(unitRow))),
     ));
   }
   paint();
