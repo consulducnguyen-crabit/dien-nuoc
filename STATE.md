@@ -1,11 +1,11 @@
 # STATE.md: trạng thái phiên làm việc
 
-Cập nhật lần cuối: 2026-11-01. Commit gần nhất: `a437474` (nhánh `main`, đã push lên `origin/main`).
+Cập nhật lần cuối: 2026-11-01. Commit gần nhất: `ec970df` (nhánh `main`, đã push lên `origin/main`).
 Repo: https://github.com/consulducnguyen-crabit/dien-nuoc. Trang chạy trên GitHub Pages (main / root).
 
 ## 0. Chốt phiên (2026-11-01)
 
-- Git: `main` khớp `origin/main` tại `a437474`. Chỉ `STATE.md` này là file mới chưa commit (chờ người dùng đồng ý).
+- Git: `main` khớp `origin/main` tại `ec970df` (đã push). Cây làm việc sạch.
 - Test: 53/53 pass. Không có việc dở dang, không có agent nào còn chạy.
 - Việc làm đầu tiên ở phiên sau: xem mục 4 (Apps Script cần dán lại và Deploy New version; kiểm tra thực tế trên điện thoại sau khi xoá bộ nhớ đệm).
 
@@ -21,8 +21,8 @@ Dữ liệu nằm trong Google Sheets, truy cập qua Apps Script Web App ([apps
 - Liên kết cài nhanh cấu hình (`#cai-nhanh=...`) để nhập URL + token trên thiết bị khác.
 - Thẻ "Hoá đơn kỳ ..." ở đầu trang Nhập: ma trận căn x Điện/Nước, xanh là đã có, đỏ là chưa có. Ô xanh có nút sao chép ảnh thông báo riêng từng loại, sau đó hiện "Đã thông báo" (lưu cột `notified_at` trong Sheet).
 - Kỳ: ô Kỳ là kỳ của hoá đơn, mặc định là tháng trước, tự chuyển sang kỳ vừa lưu sau khi Lưu. Ảnh thông báo hiển thị đúng kỳ đó, hạn đóng mặc định là ngày 10 của tháng kế tiếp.
-- Đồng bộ "Đã thông báo" giữa Nhập, Thống kê, Thông báo (từng loại điện/nước; logic chung ở js/notify-actions.js). Thống kê: mỗi khối Điện/Nước có trạng thái + nút sao chép. Thông báo: chọn Gộp/Chỉ điện/Chỉ nước, Tải PNG và Sao chép đều gắn cờ. state.notifiedRev báo router không dựng lại cả trang. Chưa commit, chưa kiểm tra trên trình duyệt thật.
-- Graphify: đồ thị cấu trúc ở [graphify-out/](graphify-out/) (đã đưa vào repo).
+- Đồng bộ "Đã thông báo" giữa Nhập, Thống kê, Thông báo (từng loại điện/nước; logic chung ở js/notify-actions.js). Thống kê: mỗi khối Điện/Nước có trạng thái + nút sao chép. Thông báo: chọn Gộp/Chỉ điện/Chỉ nước, Tải PNG và Sao chép đều gắn cờ. state.notifiedRev báo router không dựng lại cả trang. Đã commit `f5055c8`; chưa kiểm tra trên trình duyệt thật.
+- Graphify: đồ thị cấu trúc ở `graphify-out/` chỉ nằm trên máy local, đã gỡ khỏi repo và có trong `.gitignore` (commit `ec970df`); không commit/push thư mục này.
 
 ## 3. Kiểm tra gần nhất
 
@@ -36,7 +36,7 @@ Dữ liệu nằm trong Google Sheets, truy cập qua Apps Script Web App ([apps
 2. Điện thoại có thể đang giữ bản JS cũ trong bộ nhớ đệm; xoá dữ liệu trang web hoặc mở lại bằng liên kết cài nhanh.
 3. Chưa kiểm chứng trên thiết bị thật: OCR với ảnh khác bố cục, sao chép ảnh vào clipboard trên Safari, QR quét được sau khi nén, chất lượng font tiếng Việt trong PNG.
 4. Chưa kiểm chứng trên Sheets thật: chuỗi bắt đầu bằng `=` trong ô text (README có mục thử `=1+1`), thêm cột trên Sheet cũ.
-5. Cân nhắc: thêm `graphify-out/20*/` vào `.gitignore` (Graphify tạo thư mục sao lưu theo ngày, đã bị commit một lần ở `graphify-out/2026-11-01/`).
+5. (Đã xong) `graphify-out/` đã gỡ khỏi repo và thêm vào `.gitignore`. Lịch sử git cũ vẫn còn chứa nó; chưa viết lại lịch sử.
 6. Plan.md và test dùng 2 tin mẫu có mã `M688OP3PB08` và số `0925266996`; repo đã public. Nếu đó là giá trị thật thì nên thay bằng giá trị giả (chưa làm).
 
 ## 5. Môi trường máy này
