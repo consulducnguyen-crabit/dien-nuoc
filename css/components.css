@@ -184,6 +184,26 @@
 .usage-main { display: flex; flex-direction: column; align-items: flex-end; }
 .table th[scope="row"] { text-align: left; font-size: 14px; font-weight: 700; color: var(--ink); padding: 12px; border-top: 1px solid #EEF0FA; }
 
+/* Theo dõi hoá đơn (trang Nhập): mỗi căn một dòng; căn thiếu có viền + nền nhạt và dòng chữ "Còn thiếu" */
+.track { margin-bottom: 16px; }
+.track-summary { margin: 0 0 12px; font-weight: 600; }
+.track-list { display: flex; flex-direction: column; gap: 8px; }
+.track-row {
+  display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 8px 12px;
+  padding: 10px 12px; border-radius: 12px; border: 1px solid #EEF0FA; border-left: 4px solid var(--ok);
+}
+.track-missing { background: var(--danger-bg); border-color: rgba(194,58,63,.35); border-left-color: var(--danger); }
+.track-unit { font-size: 14px; }
+.track-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.track-gap { grid-column: 2; color: #A8302F; font-size: 12px; font-weight: 700; }
+.track-row .btn { grid-column: 3; grid-row: 1; }
+@media (max-width: 899px) {
+  .track-row { grid-template-columns: 1fr auto; }
+  .track-chips { grid-column: 1 / -1; }
+  .track-gap { grid-column: 1 / -1; }
+  .track-row .btn { grid-column: 2; grid-row: 1; }
+}
+
 /* Cấu hình */
 .steps { margin: 12px 0 0; padding-left: 20px; list-style: decimal; display: flex; flex-direction: column; gap: 6px; }
 .table-form td { padding: 8px 8px 8px 0; }

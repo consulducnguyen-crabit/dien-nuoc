@@ -9,6 +9,7 @@ import { matchUnit } from '../matcher.js';
 import { saveInvoices, ocrImage, isConfigured } from '../api.js';
 import { validateImageFile, prepareImage, ImageError } from '../imageprep.js';
 import { reloadAll, invoiceToRow, errorMessage } from '../data.js';
+import { mountTracker } from './input-tracker.js';
 
 const TYPE_META = {
   elec: { label: 'Điện', chip: 'chip-elec', icon: 'bolt' },
@@ -510,6 +511,9 @@ export function render(container) {
 
   renderItems();
 
+  // Thẻ theo dõi ở trên cùng, tự cập nhật độc lập (xem input-tracker.js)
+  const unmountTracker = mountTracker(container);
+
   container.append(h('div', { class: 'grid grid-2 grid-top' },
     inputCard,
     h('div', { class: 'stack' }, notConnected, notLoaded, resultsCard, totalsCard),
@@ -535,6 +539,7 @@ export function render(container) {
   // Rời trang: huỷ đăng ký state và thu hồi object URL của ảnh xem trước
   return () => {
     unsubscribe?.();
+    unmountTracker();
     revokePreview();
   };
 }
