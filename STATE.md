@@ -1,0 +1,61 @@
+# STATE.md: trạng thái phiên làm việc
+
+Cập nhật lần cuối: 2026-11-01. Commit gần nhất: `a437474` (nhánh `main`, đã push lên `origin/main`).
+Repo: https://github.com/consulducnguyen-crabit/dien-nuoc. Trang chạy trên GitHub Pages (main / root).
+
+## 0. Chốt phiên (2026-11-01)
+
+- Git: `main` khớp `origin/main` tại `a437474`. Chỉ `STATE.md` này là file mới chưa commit (chờ người dùng đồng ý).
+- Test: 53/53 pass. Không có việc dở dang, không có agent nào còn chạy.
+- Việc làm đầu tiên ở phiên sau: xem mục 4 (Apps Script cần dán lại và Deploy New version; kiểm tra thực tế trên điện thoại sau khi xoá bộ nhớ đệm).
+
+## 1. Tổng quan
+
+Ứng dụng web tĩnh quản lý hoá đơn điện, nước cho 3 căn (TD475, TD473, PB08). Đặc tả gốc ở [plan.md](plan.md), hướng dẫn cài đặt ở [README.md](README.md).
+Dữ liệu nằm trong Google Sheets, truy cập qua Apps Script Web App ([apps-script/Code.gs](apps-script/Code.gs)). Không có dữ liệu thật hay bí mật trong repo.
+
+## 2. Đã hoàn thành
+
+- Phase 0 đến 6 của plan.md (khung, parser + test, giao diện, backend, nối dữ liệu, ảnh thông báo + QR, README).
+- Nhập hoá đơn bằng 2 tab ở trang Nhập: dán tin nhắn (điện) và tải ảnh hoá đơn (nước, OCR qua Google Drive trong Apps Script). Thẻ kết quả từ ảnh cho sửa tay trước khi lưu.
+- Liên kết cài nhanh cấu hình (`#cai-nhanh=...`) để nhập URL + token trên thiết bị khác.
+- Thẻ "Hoá đơn kỳ ..." ở đầu trang Nhập: ma trận căn x Điện/Nước, xanh là đã có, đỏ là chưa có. Ô xanh có nút sao chép ảnh thông báo riêng từng loại, sau đó hiện "Đã thông báo" (lưu cột `notified_at` trong Sheet).
+- Kỳ: ô Kỳ là kỳ của hoá đơn, mặc định là tháng trước, tự chuyển sang kỳ vừa lưu sau khi Lưu. Ảnh thông báo hiển thị đúng kỳ đó, hạn đóng mặc định là ngày 10 của tháng kế tiếp.
+- Graphify: đồ thị cấu trúc ở [graphify-out/](graphify-out/) (đã đưa vào repo).
+
+## 3. Kiểm tra gần nhất
+
+- `node --test`: 53/53 pass.
+- Cú pháp `js/**/*.js` và `Code.gs` (chép sang .js tạm rồi `node --check`): sạch.
+- Chưa có kiểm thử tự động trên trình duyệt (Playwright MCP không kết nối). Đã chụp thử thẻ theo dõi bằng Edge headless với dữ liệu giả.
+
+## 4. Việc người dùng cần làm hoặc còn mở
+
+1. Apps Script: dán lại `Code.gs` và `appsscript.json` mới nhất, rồi Deploy bằng New version. Cần để dùng được `markNotified` (trạng thái Đã thông báo) và OCR có retry. Sheet cũ tự thêm cột `notified_at`.
+2. Điện thoại có thể đang giữ bản JS cũ trong bộ nhớ đệm; xoá dữ liệu trang web hoặc mở lại bằng liên kết cài nhanh.
+3. Chưa kiểm chứng trên thiết bị thật: OCR với ảnh khác bố cục, sao chép ảnh vào clipboard trên Safari, QR quét được sau khi nén, chất lượng font tiếng Việt trong PNG.
+4. Chưa kiểm chứng trên Sheets thật: chuỗi bắt đầu bằng `=` trong ô text (README có mục thử `=1+1`), thêm cột trên Sheet cũ.
+5. Cân nhắc: thêm `graphify-out/20*/` vào `.gitignore` (Graphify tạo thư mục sao lưu theo ngày, đã bị commit một lần ở `graphify-out/2026-11-01/`).
+6. Plan.md và test dùng 2 tin mẫu có mã `M688OP3PB08` và số `0925266996`; repo đã public. Nếu đó là giá trị thật thì nên thay bằng giá trị giả (chưa làm).
+
+## 5. Môi trường máy này
+
+- Node: `C:\Program Files\nodejs\node.exe` (v26.13.0, chưa có trong PATH của terminal đang mở). Chạy test: `& "C:\Program Files\nodejs\node.exe" --test`.
+- Git: `C:\Program Files\Git\cmd\git.exe`. Lệnh `git push` in dòng tiến trình ra stderr nên PowerShell báo `NativeCommandError`, nhưng push vẫn thành công.
+- Graphify: `C:\Users\Windows\.local\bin\graphify.exe`. Cập nhật đồ thị: `graphify.exe update .` sau mỗi lần sửa code.
+- Chạy cục bộ: `python -m http.server 8080` rồi mở http://localhost:8080.
+
+## 6. Quy ước làm việc với người dùng (từ CLAUDE.md toàn cục)
+
+- Giao tiếp hoàn toàn bằng tiếng Việt; comment trong code bằng tiếng Việt, tên biến/hàm bằng tiếng Anh.
+- Luồng sửa code: phân tích, phản biện rủi ro, đề xuất, chờ duyệt, sửa, tự kiểm tra (logic, luồng dữ liệu, bảo mật), lặp đến khi hết lỗi.
+- KHÔNG tự commit hoặc push; chỉ làm khi người dùng đồng ý rõ ràng. Mỗi lần commit phải chạy test trước.
+- Chỉ dev-implementer được ghi file trong pipeline agent; reviewer và analyst chỉ đọc. Agent con thường không có shell nên điều phối phải tự chạy `node --check` và `node --test` sau mỗi lần agent báo xong.
+
+## 7. Cấu trúc nhanh
+
+- `index.html`, `css/` (tokens, base, components).
+- `js/`: `main.js` (router hash, khởi động), `state.js`, `data.js`, `api.js`, `parser.js`, `matcher.js`, `format.js`, `summary.js`, `notice.js`, `qr.js`, `imageprep.js`, `quicksetup.js`, `ui.js`, `dom.js`.
+- `js/pages/`: `input.js`, `input-tracker.js`, `stats.js`, `notice-page.js`, `settings.js`.
+- `apps-script/`: `Code.gs`, `appsscript.json` (khai báo `oauthScopes` và dịch vụ Drive v2).
+- `tests/`: parser, qr, format, water-receipt, ocr-error, summary, notified, quicksetup.
