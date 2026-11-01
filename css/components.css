@@ -223,6 +223,12 @@
   content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%;
   border: 2px solid rgba(10,92,66,.3); border-top-color: #0A5C42; animation: spin .7s linear infinite;
 }
+/* Màn hẹp: bỏ dấu ✓✓ trong ô 'Đã thông báo' để chữ gọn tối đa 2 dòng, không tràn khỏi ô */
+@container (max-width: 459px) {
+  .track-table thead th:first-child { width: 60px; }
+  .track-done { font-size: 11px; padding: 0 2px; }
+  .track-done .track-mark { display: none; }
+}
 .track-amt { display: none; font-weight: 600; font-size: 12px; }
 /* Số tiền chỉ hiện khi thẻ đủ rộng */
 @container (min-width: 520px) {
