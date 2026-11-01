@@ -37,6 +37,10 @@ var DEFAULT_UNITS = [
 ];
 
 var MAX_BODY_LEN = 1000000;     // giới hạn kích thước body (ký tự)
+// Riêng action ocrImage: ảnh base64 tới ~2,5 triệu ký tự (+ phần bao JSON/token)
+var MAX_OCR_BASE64_LEN = 2500000;
+var MAX_OCR_BODY_LEN = 2600000;
+var OCR_MIMES = { 'image/jpeg': true, 'image/png': true, 'image/webp': true };
 var MAX_INVOICES_PER_CALL = 200;
 var MAX_UNITS = 50;
 var MAX_QR_PARTS = 10;          // 10 mảnh x 40.000 ký tự > 200.000 ký tự cho phép ở client
@@ -64,6 +68,7 @@ function doPost(e) {
       saveUnits: handleSaveUnits_,
       saveConfig: handleSaveConfig_,
       deleteInvoice: handleDeleteInvoice_,
+      ocrImage: handleOcrImage_,
       setup: handleSetup_
     };
     if (typeof action !== 'string' || !handlers.hasOwnProperty(action)) {
@@ -102,7 +107,11 @@ function badRequest_(msg) {
 
 function parseBody_(e) {
   if (!e || !e.postData || typeof e.postData.contents !== 'string') throw badRequest_('empty body');
-  if (e.postData.contents.length > MAX_BODY_LEN) throw badRequest_('body too large');
+  var len = e.postData.contents.length;
+  // Body lớn chỉ dành cho ocrImage: chặn sớm (trước khi parse) mọi body quá trần; body > MAX_BODY_LEN
+  // mà không nhắc tới ocrImage bị loại ngay, rồi kiểm lại chính xác theo body.action sau khi parse.
+  if (len > MAX_OCR_BODY_LEN) throw badRequest_('body too large');
+  if (len > MAX_BODY_LEN && e.postData.contents.indexOf('ocrImage') === -1) throw badRequest_('body too large');
   var body;
   try {
     body = JSON.parse(e.postData.contents);
@@ -110,6 +119,7 @@ function parseBody_(e) {
     throw badRequest_('invalid json');
   }
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw badRequest_('invalid body');
+  if (len > MAX_BODY_LEN && body.action !== 'ocrImage') throw badRequest_('body too large');
   return body;
 }
 
@@ -459,6 +469,59 @@ function handleDeleteInvoice_(body) {
     if (deleted > 0) writeBlock_(sheet, INVOICE_HEADERS, kept);
     return { deleted: deleted };
   });
+}
+
+/** Kiểm tra chữ ký (magic bytes) của ảnh khớp mime khai báo; bytes là mảng có dấu từ base64Decode. */
+function imageSignatureOk_(bytes, mime) {
+  function at(i) { return (bytes[i] + 256) % 256; }
+  if (bytes.length < 12) return false;
+  if (mime === 'image/jpeg') return at(0) === 0xFF && at(1) === 0xD8 && at(2) === 0xFF;
+  if (mime === 'image/png') return at(0) === 0x89 && at(1) === 0x50 && at(2) === 0x4E && at(3) === 0x47;
+  // webp: 'RIFF' .... 'WEBP'
+  return at(0) === 0x52 && at(1) === 0x49 && at(2) === 0x46 && at(3) === 0x46 &&
+    at(8) === 0x57 && at(9) === 0x45 && at(10) === 0x42 && at(11) === 0x50;
+}
+
+/**
+ * OCR ảnh bằng Google Drive (Drive advanced service v2, cần bật trong appsscript.json).
+ * Ảnh chỉ tồn tại tạm trong Drive của chủ Sheet; file tạm luôn bị xoá trong finally, kể cả khi lỗi.
+ * Không ghi log nội dung ảnh/văn bản.
+ */
+function handleOcrImage_(body) {
+  var mime = body.mime;
+  var image = body.image;
+  if (typeof mime !== 'string' || !OCR_MIMES.hasOwnProperty(mime)) throw badRequest_('bad mime');
+  if (typeof image !== 'string' || image.length === 0 || image.length > MAX_OCR_BASE64_LEN) {
+    throw badRequest_('bad image size');
+  }
+  if (image.length % 4 !== 0 || !/^[A-Za-z0-9+\/]+={0,2}$/.test(image)) throw badRequest_('bad base64');
+  var bytes;
+  try {
+    bytes = Utilities.base64Decode(image);
+  } catch (x) {
+    throw badRequest_('bad base64');
+  }
+  if (!imageSignatureOk_(bytes, mime)) throw badRequest_('mime mismatch');
+
+  var fileId = null;
+  try {
+    var blob = Utilities.newBlob(bytes, mime, 'ocr');
+    var title = 'ocr-tmp-' + Utilities.getUuid();
+    var file = Drive.Files.insert({ title: title, mimeType: mime }, blob, { ocr: true, ocrLanguage: 'vi' });
+    fileId = file.id;
+    var text = DocumentApp.openById(fileId).getBody().getText();
+    return { text: String(text || '') };
+  } finally {
+    if (fileId) {
+      try {
+        Drive.Files.remove(fileId); // xoá hẳn, không để lại thùng rác
+      } catch (x) {
+        try { DriveApp.getFileById(fileId).setTrashed(true); } catch (y) {
+          console.error('ocr cleanup failed: ' + (y && y.message ? y.message : y));
+        }
+      }
+    }
+  }
 }
 
 function handleSetup_() {

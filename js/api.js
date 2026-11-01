@@ -64,7 +64,7 @@ export function clearConnection() {
 }
 
 /** Gọi một action; trả về phần dữ liệu của phản hồi (đã bỏ cờ ok). */
-export async function call(action, payload = {}) {
+export async function call(action, payload = {}, timeoutMs = TIMEOUT_MS) {
   const url = readStore(KEY_URL);
   const token = readStore(KEY_TOKEN);
   if (!url || !token) {
@@ -75,7 +75,7 @@ export async function call(action, payload = {}) {
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res;
   try {
     // text/plain để tránh preflight CORS; token nằm trong body, không đặt trên URL.
@@ -88,7 +88,7 @@ export async function call(action, payload = {}) {
     });
   } catch (err) {
     if (err && err.name === 'AbortError') {
-      throw new ApiError('timeout', 'Hết thời gian chờ phản hồi (20 giây). Vui lòng thử lại.');
+      throw new ApiError('timeout', `Hết thời gian chờ phản hồi (${Math.round(timeoutMs / 1000)} giây). Vui lòng thử lại.`);
     }
     const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
     throw new ApiError(
@@ -138,3 +138,24 @@ export const saveUnits = (units) => call('saveUnits', { units });
 export const saveConfig = (config) => call('saveConfig', { config });
 export const deleteInvoice = (key) => call('deleteInvoice', { key });
 export const setup = () => call('setup');
+
+const OCR_TIMEOUT_MS = 60000;
+/**
+ * OCR ảnh qua Google Drive. base64 không kèm tiền tố data:; mime: image/jpeg | image/png | image/webp.
+ * Trả { text }. Lỗi máy chủ thường do chưa bật Drive API / chưa cấp quyền Drive cho script.
+ */
+export async function ocrImage(base64, mime) {
+  try {
+    return await call('ocrImage', { image: base64, mime }, OCR_TIMEOUT_MS);
+  } catch (err) {
+    if (err instanceof ApiError && err.code === 'server_error') {
+      throw new ApiError('server_error',
+        'Không đọc được ảnh. Hãy kiểm tra đã bật Drive API (appsscript.json), cấp quyền Drive và Deploy phiên bản mới (xem README).');
+    }
+    if (err instanceof ApiError && err.code === 'bad_request') {
+      throw new ApiError('bad_request',
+        'Máy chủ từ chối ảnh (sai định dạng, quá lớn, hoặc Code.gs chưa là bản mới có ocrImage). Hãy thử ảnh khác.');
+    }
+    throw err;
+  }
+}

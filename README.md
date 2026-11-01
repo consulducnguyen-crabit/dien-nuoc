@@ -42,6 +42,16 @@ Cấu trúc: `index.html`, `css/`, `js/`, `apps-script/` (gồm `Code.gs`, `apps
 
 Lưu ý quan trọng: mỗi lần sửa `Code.gs`, bạn phải **Deploy -> Manage deployments -> biểu tượng bút chì -> Version: New version -> Deploy**. Nếu không, URL vẫn chạy mã cũ. (Chọn "Anyone" vẫn an toàn vì mọi yêu cầu đều phải kèm `API_TOKEN`.)
 
+### Bật đọc ảnh hoá đơn nước (OCR qua Google Drive)
+
+Tab **Tải ảnh hoá đơn** ở trang Nhập cần Drive API. Khi cập nhật từ bản cũ:
+
+1. Dán `apps-script/Code.gs` mới và `apps-script/appsscript.json` mới (bật **Show "appsscript.json" manifest file** trong Project Settings để sửa file này). File manifest đã khai báo dịch vụ nâng cao `Drive` (v2).
+2. Chạy hàm bất kỳ (ví dụ `setup`) một lần để Google hiện hộp thoại cấp thêm quyền Drive/Documents, chọn **Allow**.
+3. **Deploy -> Manage deployments -> biểu tượng bút chì -> Version: New version -> Deploy** (URL giữ nguyên).
+
+Lưu ý: ảnh được gửi tới Google Drive của chủ Sheet để nhận diện chữ rồi bị xoá ngay (không lưu ở đâu khác). Kết quả OCR có thể sai nên luôn kiểm tra lại các trường trước khi lưu. Nếu app báo không đọc được ảnh, kiểm tra lại các bước trên và Drive API đã bật cho dự án.
+
 ## 6. Kết nối app với Google Sheet
 
 1. Mở app (xem bước 8 hoặc 9), vào màn **Cấu hình**.

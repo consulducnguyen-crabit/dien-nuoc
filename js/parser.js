@@ -97,6 +97,118 @@ const REQUIRED = {
   water: ['customerCode', 'consumption', 'amount'],
 };
 
+// ===== Hoá đơn nước từ ảnh (văn bản OCR của màn hình 'Thanh toán MM - YYYY') =====
+
+// Token số có thể lẫn ký tự OCR nhầm (O/o->0, l/I/|->1); phải đứng sau ranh giới chữ.
+const OCR_TOKEN = /(?<![a-z0-9])[0-9oli|][0-9oli|.,]*/g;
+
+/** Sửa ký tự OCR nhầm trong một token số rồi đọc giá trị; ',' hoặc '.' kiểu nghìn (1-3 chữ số) coi là ngăn nghìn. */
+function ocrNumber(token) {
+  const t = String(token).replace(/[oO]/g, '0').replace(/[lI|iL]/g, '1').replace(/[.,]+$/, '');
+  if (/^\d{1,3}([.,]\d{3})+$/.test(t)) return Number(t.replace(/[.,]/g, ''));
+  return parseVnNumber(t);
+}
+
+/** Mọi token số (phải có ít nhất 1 chữ số thật) trong chuỗi đã normalize. */
+function numberTokens(s) {
+  return [...s.matchAll(OCR_TOKEN)].map((m) => m[0]).filter((t) => /\d/.test(t));
+}
+
+// Dòng chỉ gồm số (giá trị bị OCR tách sang dòng riêng sau nhãn), cho phép đơn vị 'm3' đứng cuối
+const isNumericLine = (l) => /^[0-9oli|.,\s]+(?:m\s*3?)?\s*$/.test(l) && /\d/.test(l);
+
+/**
+ * Tìm giá trị số sau nhãn: ưu tiên cùng dòng, nếu không có thì các dòng toàn số kế tiếp.
+ * pick: 'first' | 'last' token trong nhóm tìm được.
+ */
+function valueAfterLabel(lines, labelRe, pick = 'first') {
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(labelRe);
+    if (!m) continue;
+    let tokens = numberTokens(lines[i].slice(m.index + m[0].length));
+    for (let j = i + 1; !tokens.length && j < lines.length && j <= i + 3 && isNumericLine(lines[j]); j++) {
+      tokens = numberTokens(lines[j]);
+    }
+    if (!tokens.length) continue;
+    const v = ocrNumber(pick === 'last' ? tokens[tokens.length - 1] : tokens[0]);
+    if (v !== null) return v;
+  }
+  return null;
+}
+
+/** Mã khách hàng: từ ngay sau nhãn (cùng dòng hoặc dòng kế tiếp). */
+function codeAfterLabel(lines, labelRe) {
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(labelRe);
+    if (!m) continue;
+    for (const s of [lines[i].slice(m.index + m[0].length), lines[i + 1] || '']) {
+      const w = s.replace(/^[\s:;.|-]+/, '').match(/^([a-z0-9-]+)/);
+      if (w && /\d/.test(w[1])) return w[1].toUpperCase();
+    }
+  }
+  return null;
+}
+
+/**
+ * Phân tích văn bản OCR của ảnh hoá đơn nước (thuần). Chịu lỗi OCR: số cùng dòng hoặc dòng kế,
+ * O/0, l/1, dấu '.'/',' ngăn nghìn, thứ tự dòng xáo trộn.
+ * @returns {{invoices: object[], errors: object[], warnings: string[]}}
+ *   warnings: cảnh báo không chặn (vd bảng tiền không khớp); cũng nằm trong invoice.warnings.
+ */
+export function parseWaterReceiptText(text) {
+  const raw = String(text ?? '');
+  const invoices = [];
+  const errors = [];
+  const warnings = [];
+  const lines = raw.split(/\r?\n/).map(normalize).filter((l) => /[a-z0-9]/.test(l));
+  if (!lines.length) return { invoices, errors, warnings };
+
+  const joined = lines.join(' ');
+  let period = null;
+  const pm = joined.match(/thanh toan\s*([0-9oli|]{1,2})\s*[-–—_.\/]?\s*([0-9oli|]{4})(?![0-9])/);
+  if (pm) {
+    const mo = ocrNumber(pm[1]);
+    const yr = ocrNumber(pm[2]);
+    if (mo >= 1 && mo <= 12 && yr >= 2000 && yr <= 2100) period = `${yr}-${pad2(mo)}`;
+  }
+
+  const customerCode = codeAfterLabel(lines, /ma\s*khach\s*hang\s*/);
+  const indexStart = valueAfterLabel(lines, /chi so cu\b\s*:?/);
+  const indexEnd = valueAfterLabel(lines, /chi so moi\b\s*:?/);
+  const consumption = valueAfterLabel(lines, /tieu thu\s*:?/);
+  // Dòng bảng: số tiền là token cuối dòng (Cộng có thêm cột số lượng đứng trước)
+  const sub = valueAfterLabel(lines, /^[^a-z0-9]*cong\b/, 'last');
+  const discount = valueAfterLabel(lines, /^[^a-z0-9]*giam tru\b/, 'last');
+  const vat = valueAfterLabel(lines, /^[^a-z0-9]*thue\b/, 'last');
+  const amount = valueAfterLabel(lines, /^[^a-z0-9]*tong tien\b\s*:?/, 'last');
+
+  const inv = {
+    type: 'water', customerCode, period, periodSource: period ? 'image' : null,
+    indexStart, indexEnd, consumption, unitLabel: 'm³', amount, dueDate: null,
+    rawMessage: raw, fromImage: true, warnings: [],
+  };
+
+  // Không nhận ra nhãn nào: không phải ảnh hoá đơn nước
+  const found = [customerCode, indexStart, indexEnd, consumption, amount, period].some((v) => v !== null);
+  if (!found) {
+    errors.push({ reason: 'unrecognized', snippet: raw.trim() });
+    return { invoices, errors, warnings };
+  }
+
+  const missing = REQUIRED.water.filter((f) => inv[f] === null);
+  if (missing.length) {
+    missing.forEach((field) => errors.push({ reason: 'missing_field', field, snippet: raw.trim() }));
+    return { invoices, errors, warnings };
+  }
+
+  if ([sub, discount, vat].every((v) => v !== null) && sub - discount + vat !== amount) {
+    inv.warnings.push('Bảng tiền không khớp (Cộng − Giảm trừ + Thuế ≠ Tổng tiền), có thể OCR đọc sai số.');
+  }
+  warnings.push(...inv.warnings);
+  invoices.push(inv);
+  return { invoices, errors, warnings };
+}
+
 /**
  * Phân tích văn bản dán vào: tách thành nhiều tin, phân loại, trích trường.
  * @returns {{invoices: object[], errors: {reason: string, field?: string, snippet: string}[]}}

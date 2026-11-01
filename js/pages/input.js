@@ -4,9 +4,10 @@ import { h, icon } from '../dom.js';
 import { getState, subscribe } from '../state.js';
 import { formatMoney, formatNumber, formatNumberOrDash, formatDate, formatPeriod, invoiceKey } from '../format.js';
 import { toast, setBusy, staggerIn } from '../ui.js';
-import { parseMessages } from '../parser.js';
+import { parseMessages, parseWaterReceiptText, parseVnNumber } from '../parser.js';
 import { matchUnit } from '../matcher.js';
-import { saveInvoices, isConfigured } from '../api.js';
+import { saveInvoices, ocrImage, isConfigured } from '../api.js';
+import { validateImageFile, prepareImage, ImageError } from '../imageprep.js';
 import { reloadAll, invoiceToRow, errorMessage } from '../data.js';
 
 const TYPE_META = {
@@ -55,14 +56,70 @@ export function render(container) {
   const analyzeBtn = h('button', { type: 'button', class: 'btn' }, h('span', { class: 'btn-label' }, 'Phân tích tin nhắn'));
   const clearBtn = h('button', { type: 'button', class: 'btn btn-secondary' }, 'Xoá nội dung');
 
-  const inputCard = h('div', { class: 'card' },
-    h('h2', null, 'Dán tin nhắn'),
-    h('p', { class: 'text-sub' }, 'Kỳ đang chọn: ', periodLabel, ' (dùng cho tin nước đứng một mình; tin nước đi kèm tin điện cùng căn lấy kỳ của tin điện)'),
-    h('div', { class: 'field mt' },
+  const pastePanel = h('div', { role: 'tabpanel', id: 'panel-paste', 'aria-labelledby': 'tab-paste', class: 'mt' },
+    h('div', { class: 'field' },
       h('label', { for: 'msg-input' }, 'Nội dung tin nhắn'),
       textarea,
     ),
     h('div', { class: 'actions mt' }, analyzeBtn, clearBtn),
+  );
+
+  // ---- Tab "Tải ảnh hoá đơn" (nước, OCR qua Google Drive) ----
+  const fileInput = h('input', { type: 'file', id: 'receipt-file', class: 'input', accept: 'image/*' });
+  const captureChk = h('input', { type: 'checkbox', id: 'receipt-capture' });
+  const preview = h('img', { class: 'receipt-preview', alt: 'Xem trước ảnh hoá đơn nước đã chọn', hidden: true });
+  const readBtn = h('button', { type: 'button', class: 'btn', disabled: true }, h('span', { class: 'btn-label' }, 'Đọc ảnh'));
+  const removeImgBtn = h('button', { type: 'button', class: 'btn btn-secondary', disabled: true }, 'Bỏ ảnh');
+  const imgStatus = h('p', { class: 'text-sub mt', role: 'status', 'aria-live': 'polite' });
+  const imgBlockNote = h('p', { class: 'note-warn' });
+  const imagePanel = h('div', { role: 'tabpanel', id: 'panel-image', 'aria-labelledby': 'tab-image', class: 'mt', hidden: true },
+    h('div', { class: 'field' },
+      h('label', { for: 'receipt-file' }, 'Ảnh hoá đơn nước (JPEG, PNG, WebP; tối đa 8 MB)'),
+      fileInput,
+    ),
+    h('div', { class: 'check-row mt' }, captureChk, h('label', { for: 'receipt-capture' }, 'Mở camera sau khi chọn (trên điện thoại)')),
+    h('div', { class: 'mt' }, preview),
+    h('div', { class: 'actions mt' }, readBtn, removeImgBtn),
+    imgBlockNote,
+    imgStatus,
+    h('p', { class: 'text-sub mt' }, 'Ảnh được gửi tới Google Drive của chủ Sheet để nhận diện chữ rồi xoá ngay. Kết quả có thể sai, hãy kiểm tra lại trước khi lưu.'),
+  );
+
+  // ---- Tablist ----
+  const TABS = [
+    { id: 'paste', label: 'Dán tin nhắn', panel: pastePanel },
+    { id: 'image', label: 'Tải ảnh hoá đơn', panel: imagePanel },
+  ];
+  const tabEls = TABS.map((t) => h('button', {
+    type: 'button', role: 'tab', id: `tab-${t.id}`, class: 'tab', 'aria-controls': `panel-${t.id}`,
+  }, t.label));
+  function selectTab(i, focus) {
+    TABS.forEach((t, k) => {
+      const on = k === i;
+      tabEls[k].setAttribute('aria-selected', String(on));
+      tabEls[k].tabIndex = on ? 0 : -1; // roving tabindex: chỉ tab đang chọn nằm trong thứ tự Tab
+      t.panel.hidden = !on; // chỉ ẩn, không dựng lại nên nội dung đã dán/ảnh đã chọn được giữ nguyên
+    });
+    if (focus) tabEls[i].focus();
+  }
+  tabEls.forEach((el, i) => {
+    el.addEventListener('click', () => selectTab(i, false));
+    el.addEventListener('keydown', (ev) => {
+      const n = TABS.length;
+      const next = { ArrowRight: (i + 1) % n, ArrowLeft: (i + n - 1) % n, Home: 0, End: n - 1 }[ev.key];
+      if (next === undefined) return;
+      ev.preventDefault();
+      selectTab(next, true);
+    });
+  });
+  selectTab(0, false);
+
+  const inputCard = h('div', { class: 'card' },
+    h('h2', null, 'Nhập hoá đơn'),
+    h('p', { class: 'text-sub' }, 'Kỳ đang chọn: ', periodLabel, ' (dùng cho hoá đơn nước đứng một mình; tin nước đi kèm tin điện cùng căn lấy kỳ của tin điện; ảnh nước có ghi kỳ thì lấy kỳ trong ảnh)'),
+    h('div', { class: 'tablist mt', role: 'tablist', 'aria-label': 'Cách nhập hoá đơn' }, ...tabEls),
+    pastePanel,
+    imagePanel,
   );
 
   // ---- Thẻ phải: kết quả ----
@@ -96,11 +153,12 @@ export function render(container) {
   /**
    * Kỳ ghi nhận của một dòng (mục 6.4): điện lấy kỳ trong tin; nước ưu tiên kỳ của tin điện cùng căn
    * (dán chung một lượt), nếu không có thì dùng kỳ đang chọn.
-   * source: 'tin' | 'elec' (theo tin điện cùng căn) | 'selected'.
+   * source: 'tin' | 'image' (theo tiêu đề ảnh, có thể do người dùng sửa) | 'elec' (theo tin điện cùng căn) | 'selected'.
    */
   function periodOfRow(row) {
     const { inv, unitName } = row;
     if (inv.type === 'elec' && inv.period) return { period: inv.period, source: 'tin' };
+    if (inv.type === 'water' && inv.fromImage && inv.period) return { period: inv.period, source: 'image' };
     if (inv.type === 'water' && unitName) {
       const e = rows.find((r) => r.inv.type === 'elec' && r.inv.period && r.unitName === unitName);
       if (e) return { period: e.inv.period, source: 'elec' };
@@ -138,7 +196,16 @@ export function render(container) {
       : '';
     // Chỉ cho lưu khi đã kết nối + đã tải dữ liệu, có kết quả và mọi hoá đơn đã gán căn
     notLoaded.hidden = !isConfigured() || getState().loaded;
-    saveBtn.disabled = !isConfigured() || !getState().loaded || !rows.length || rows.some((r) => !r.unitName);
+    saveBtn.disabled = !isConfigured() || !getState().loaded || !rows.length
+      || rows.some((r) => !r.unitName || rowIncomplete(r));
+    rows.forEach((r) => r.paintNotes?.());
+    updateImageControls();
+  }
+
+  // Hoá đơn từ ảnh phải đủ mã KH, tiêu thụ, tổng tiền (người dùng có thể đã xoá khi sửa tay)
+  function rowIncomplete(r) {
+    const { inv } = r;
+    return !!inv.fromImage && (!inv.customerCode || inv.consumption == null || inv.amount == null);
   }
 
   /** Một thẻ kết quả; dropdown chọn căn cập nhật tại chỗ (không dựng lại để giữ focus). */
@@ -169,6 +236,8 @@ export function render(container) {
     }
     paintMatch();
 
+    if (inv.fromImage) return buildImageItem(row, meta, slot, paintMatch);
+
     const dl = h('dl', { class: 'kv' });
     for (const [label, value] of fieldRows(inv)) {
       dl.append(h('div', null, h('dt', null, label), h('dd', null, value)));
@@ -198,6 +267,70 @@ export function render(container) {
       item.append(h('p', { class: 'note-warn' }, 'Số liệu bất thường (tiêu thụ hoặc số tiền bằng 0), hãy kiểm tra lại.'));
     }
     return item;
+  }
+
+  let fieldSeq = 0; // id duy nhất cho label/input của các thẻ ảnh
+
+  /**
+   * Thẻ kết quả của hoá đơn đọc từ ảnh: OCR dễ sai nên mọi trường cho sửa tay trước khi Lưu.
+   * Sửa tại chỗ (không dựng lại thẻ) để giữ focus; giá trị ghi thẳng vào row.inv.
+   */
+  function buildImageItem(row, meta, slot, paintMatch) {
+    const { inv } = row;
+    const uid = `rc${++fieldSeq}`;
+    const grid = h('div', { class: 'edit-grid' });
+    const addField = (key, label, value, { type = 'text', inputmode, onInput, onChange } = {}) => {
+      const input = h('input', { class: 'input input-sm', id: `${uid}-${key}`, type, inputmode, value });
+      if (onInput) input.addEventListener('input', () => { onInput(input.value); updateTotals(); });
+      if (onChange) input.addEventListener('change', () => onChange(input.value));
+      grid.append(h('div', { class: 'field' }, h('label', { for: `${uid}-${key}` }, label), input));
+    };
+    const numToStr = (v) => (v == null ? '' : String(v));
+    const toNum = (s) => (s.trim() === '' ? null : parseVnNumber(s));
+
+    addField('code', 'Mã khách hàng', inv.customerCode || '', {
+      onInput: (v) => { inv.customerCode = v.trim().toUpperCase(); },
+      // Đổi mã: khớp lại căn (chỉ khi người dùng sửa xong để không nhảy căn khi đang gõ)
+      onChange: () => {
+        const hit = inv.customerCode ? matchUnit(inv.customerCode, inv.type, getState().units) : null;
+        row.unitName = hit ? String(hit.name).toUpperCase() : '';
+        paintMatch();
+        updateTotals();
+      },
+    });
+    addField('start', 'Chỉ số cũ', numToStr(inv.indexStart), { inputmode: 'decimal', onInput: (v) => { inv.indexStart = toNum(v); } });
+    addField('end', 'Chỉ số mới', numToStr(inv.indexEnd), { inputmode: 'decimal', onInput: (v) => { inv.indexEnd = toNum(v); } });
+    addField('cons', 'Tiêu thụ (m³)', numToStr(inv.consumption), { inputmode: 'decimal', onInput: (v) => { inv.consumption = toNum(v); } });
+    addField('amount', 'Tổng tiền (đ)', numToStr(inv.amount), { inputmode: 'numeric', onInput: (v) => { inv.amount = toNum(v); } });
+    addField('period', 'Kỳ (tháng)', inv.period || '', {
+      type: 'month',
+      onInput: (v) => { inv.period = /^\d{4}-(0[1-9]|1[0-2])$/.test(v) ? v : null; inv.periodSource = inv.period ? 'image' : null; },
+    });
+
+    const periodNote = h('p', { class: 'text-sub' });
+    const notes = h('div', null);
+    row.paintPeriod = () => {
+      const { period: p, source } = periodOfRow(row);
+      periodNote.textContent = `Kỳ ghi nhận: ${formatPeriod(p)} (${source === 'image' ? 'theo ảnh' : source === 'elec' ? 'theo tin điện cùng căn' : 'kỳ đang chọn'})`;
+    };
+    row.paintNotes = () => {
+      notes.replaceChildren();
+      for (const w of inv.warnings || []) notes.append(h('p', { class: 'note-warn' }, w));
+      if (rowIncomplete(row)) notes.append(h('p', { class: 'note-warn' }, 'Cần có mã khách hàng, tiêu thụ và tổng tiền mới lưu được.'));
+      if (inv.amount === 0 || inv.consumption === 0) {
+        notes.append(h('p', { class: 'note-warn' }, 'Số liệu bất thường (tiêu thụ hoặc số tiền bằng 0), hãy kiểm tra lại.'));
+      }
+    };
+    row.paintPeriod();
+    row.paintNotes();
+
+    return h('div', { class: 'result-item' },
+      h('div', { class: 'result-head' }, h('span', { class: `chip ${meta.chip}` }, meta.label), slot),
+      h('div', { class: 'alert alert-warn' }, icon('warn'), h('span', null, 'Đọc từ ảnh — hãy kiểm tra lại')),
+      h('div', { class: 'mt' }, grid),
+      periodNote,
+      notes,
+    );
   }
 
   const ERROR_TEXT = {
@@ -251,6 +384,84 @@ export function render(container) {
     showResults(parseMessages(textarea.value));
   });
 
+  // ---- Ảnh hoá đơn: chọn -> xem trước -> đọc (OCR) -> dùng chung vùng kết quả ----
+  let previewUrl = null; // object URL của ảnh đang xem trước; phải thu hồi khi bỏ/đổi/rời trang
+  let reading = false;
+
+  function revokePreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null;
+    preview.removeAttribute('src');
+    preview.hidden = true;
+  }
+
+  function updateImageControls() {
+    // Đọc ảnh cần gọi Apps Script: chưa cấu hình / chưa tải xong dữ liệu thì khoá và giải thích
+    const blocked = !isConfigured() ? 'Cần kết nối Google Sheets (trang Cấu hình) mới đọc được ảnh.'
+      : !getState().loaded ? 'Đang chờ tải dữ liệu từ Google Sheets, chưa thể đọc ảnh.' : '';
+    imgBlockNote.textContent = blocked;
+    imgBlockNote.hidden = !blocked;
+    readBtn.disabled = reading || !!blocked || !previewUrl;
+    removeImgBtn.disabled = reading || !previewUrl;
+  }
+
+  function clearImage() {
+    revokePreview();
+    fileInput.value = '';
+    imgStatus.textContent = '';
+    updateImageControls();
+  }
+
+  captureChk.addEventListener('change', () => {
+    if (captureChk.checked) fileInput.setAttribute('capture', 'environment');
+    else fileInput.removeAttribute('capture');
+  });
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    revokePreview();
+    imgStatus.textContent = '';
+    if (file) {
+      try {
+        validateImageFile(file);
+        previewUrl = URL.createObjectURL(file);
+        preview.src = previewUrl;
+        preview.hidden = false;
+      } catch (err) {
+        fileInput.value = '';
+        toast(err instanceof ImageError ? err.message : 'Không dùng được ảnh này.', 'error');
+      }
+    }
+    updateImageControls();
+  });
+
+  removeImgBtn.addEventListener('click', clearImage);
+
+  readBtn.addEventListener('click', async () => {
+    if (reading || !previewUrl) return;
+    reading = true;
+    updateImageControls();
+    setBusy(readBtn, true);
+    imgStatus.textContent = 'Đang đọc ảnh…';
+    try {
+      const { base64, mime } = await prepareImage(previewUrl);
+      const { text } = await ocrImage(base64, mime);
+      const result = parseWaterReceiptText(text);
+      showResults(result);
+      imgStatus.textContent = result.invoices.length
+        ? 'Đã đọc xong. Hãy kiểm tra và sửa các trường ở phần Kết quả nhận diện.'
+        : 'Đọc xong nhưng chưa nhận diện được hoá đơn nước (xem phần Kết quả nhận diện).';
+    } catch (err) {
+      // Giữ ảnh đã chọn để thử lại
+      imgStatus.textContent = 'Không đọc được ảnh.';
+      toast(err instanceof ImageError ? err.message : errorMessage(err), 'error');
+    } finally {
+      reading = false;
+      setBusy(readBtn, false);
+      updateImageControls();
+    }
+  });
+
   clearBtn.addEventListener('click', () => {
     textarea.value = '';
     rows = [];
@@ -260,7 +471,7 @@ export function render(container) {
   });
 
   saveBtn.addEventListener('click', async () => {
-    if (!getState().loaded || !rows.length || rows.some((r) => !r.unitName)) return;
+    if (!getState().loaded || !rows.length || rows.some((r) => !r.unitName || rowIncomplete(r))) return;
     // Gộp theo key: nếu cùng key xuất hiện hai lần thì bản sau thắng (khớp hành vi server)
     const payload = new Map();
     for (const row of rows) {
@@ -287,6 +498,7 @@ export function render(container) {
     }
     toast(`Đã lưu ${payload.size} hoá đơn vào Google Sheets.`, 'ok');
     textarea.value = '';
+    clearImage();
     rows = [];
     errors = [];
     setBusy(saveBtn, false);
@@ -302,7 +514,7 @@ export function render(container) {
   ));
 
   // Đổi kỳ / danh sách căn: chỉ cập nhật phần hiển thị, KHÔNG dựng lại trang để không mất nội dung đã dán
-  return subscribe((s, changed) => {
+  const unsubscribe = subscribe((s, changed) => {
     if (changed.includes('loaded')) updateTotals(); // mở/khoá nút Lưu + cảnh báo theo trạng thái tải
     if (changed.includes('period')) {
       periodLabel.textContent = formatPeriod(s.period);
@@ -318,4 +530,9 @@ export function render(container) {
       renderItems();
     }
   });
+  // Rời trang: huỷ đăng ký state và thu hồi object URL của ảnh xem trước
+  return () => {
+    unsubscribe?.();
+    revokePreview();
+  };
 }
