@@ -26,3 +26,11 @@ test('Mobile: huy hiệu hạn đóng không làm trang tràn ngang', async ({ p
   const m = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, view: window.innerWidth }));
   expect(m.doc).toBeLessThanOrEqual(m.view);
 });
+
+test('Favicon là logo căn nhà (favicon.svg) và tải được', async ({ page, request }) => {
+  await openApp(page);
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', 'favicon.svg');
+  const res = await request.get('http://localhost:8765/favicon.svg');
+  expect(res.ok()).toBe(true);
+  expect(res.headers()['content-type']).toContain('image/svg+xml');
+});
