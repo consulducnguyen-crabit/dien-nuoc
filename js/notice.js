@@ -46,6 +46,12 @@ export function downloadDataUrl(dataUrl, fileName) {
   a.remove();
 }
 
+/** Điện thoại/máy tính bảng: clipboard ảnh không dán được vào Zalo/Messenger nên chuyển sang tải file về. */
+export function isMobileDevice() {
+  const ua = navigator.userAgent || '';
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1); // iPadOS giả danh Mac
+}
+
 /**
  * Sao chép PNG vào clipboard. Nhận Promise<dataUrl> (hoặc dataUrl) và PHẢI được gọi đồng bộ trong handler click:
  * Safari chỉ cho clipboard.write khi gọi trong cử chỉ người dùng, nên ClipboardItem nhận Promise<Blob>
@@ -53,6 +59,7 @@ export function downloadDataUrl(dataUrl, fileName) {
  * (để nơi gọi chuyển sang tải file).
  */
 export async function copyPngToClipboard(dataUrlOrPromise) {
+  if (isMobileDevice()) return false;
   if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') return false;
   try {
     const blobPromise = Promise.resolve(dataUrlOrPromise).then(async (dataUrl) => {

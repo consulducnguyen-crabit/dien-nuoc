@@ -6,7 +6,7 @@ import { defaultDueDate } from './format.js';
 import { toast, setBusy } from './ui.js';
 import { summarizeUnit } from './summary.js';
 import {
-  buildNoticeNode, renderNoticePng, noticeFileName, downloadDataUrl, copyPngToClipboard,
+  buildNoticeNode, renderNoticePng, noticeFileName, downloadDataUrl, copyPngToClipboard, isMobileDevice,
 } from './notice.js';
 import { qrFromConfig } from './qr.js';
 import { markNotified, ApiError } from './api.js';
@@ -75,7 +75,9 @@ export async function copyKindNotice(btn, unit, kind, inv, onDone = () => {}) {
       toast(`Đã sao chép ảnh thông báo ${name}, có thể dán vào Zalo hoặc Messenger.`, 'ok');
     } else {
       downloadDataUrl(url, noticeFileName(unit, getState().period, kind));
-      toast(`Trình duyệt không cho sao chép ảnh nên đã tải file thông báo ${name} về máy.`, 'info');
+      toast(isMobileDevice()
+        ? `Đã tải ảnh thông báo ${name} về máy (xem trong Bộ sưu tập/Tải xuống), gửi Zalo hoặc Messenger từ đó.`
+        : `Trình duyệt không cho sao chép ảnh nên đã tải file thông báo ${name} về máy.`, 'info');
     }
     await persistNotified([inv.key]);
   } finally {

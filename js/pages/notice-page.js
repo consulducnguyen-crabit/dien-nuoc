@@ -5,7 +5,7 @@ import { defaultDueDate } from '../format.js';
 import { toast, setBusy, renderDataGate } from '../ui.js';
 import { summarizeUnit } from '../summary.js';
 import {
-  buildNoticeNode, loadHtmlToImage, renderNoticePng, noticeFileName, downloadDataUrl, copyPngToClipboard,
+  buildNoticeNode, loadHtmlToImage, renderNoticePng, noticeFileName, downloadDataUrl, copyPngToClipboard, isMobileDevice,
 } from '../notice.js';
 import { qrFromConfig } from '../qr.js';
 import { persistNotified } from '../notify-actions.js';
@@ -127,7 +127,9 @@ export function render(container) {
       } else {
         // Trình duyệt không hỗ trợ/từ chối quyền clipboard: tự tải file thay thế
         downloadDataUrl(url, fileName());
-        toast('Trình duyệt không cho sao chép ảnh nên đã tải file về máy.', 'info');
+        toast(isMobileDevice()
+          ? 'Đã tải ảnh về máy (xem trong Bộ sưu tập/Tải xuống), gửi Zalo hoặc Messenger từ đó.'
+          : 'Trình duyệt không cho sao chép ảnh nên đã tải file về máy.', 'info');
       }
       await persistNotified(keys);
     } finally { setBusy(copyBtn, false); refresh(); }
