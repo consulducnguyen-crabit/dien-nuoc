@@ -22,11 +22,12 @@ Dữ liệu nằm trong Google Sheets, truy cập qua Apps Script Web App ([apps
 - Thẻ "Hoá đơn kỳ ..." ở đầu trang Nhập: ma trận căn x Điện/Nước, xanh là đã có, đỏ là chưa có. Ô xanh có nút sao chép ảnh thông báo riêng từng loại, sau đó hiện "Đã thông báo" (lưu cột `notified_at` trong Sheet).
 - Kỳ: ô Kỳ là kỳ của hoá đơn, mặc định là tháng trước, tự chuyển sang kỳ vừa lưu sau khi Lưu. Ảnh thông báo hiển thị đúng kỳ đó, hạn đóng mặc định là ngày 10 của tháng kế tiếp.
 - Đồng bộ "Đã thông báo" giữa Nhập, Thống kê, Thông báo (từng loại điện/nước; logic chung ở js/notify-actions.js). Thống kê: mỗi khối Điện/Nước có trạng thái + nút sao chép. Thông báo: chọn Gộp/Chỉ điện/Chỉ nước, Tải PNG và Sao chép đều gắn cờ. state.notifiedRev báo router không dựng lại cả trang. Đã commit `f5055c8`; chưa kiểm tra trên trình duyệt thật.
+- Giao diện (phiên gần nhất): ảnh thông báo có huy hiệu "Hạn đóng" vàng cam kèm tờ lịch (`dueBadge()` trong js/notice.js, mờ khi chưa chọn ngày); trang Thống kê bỏ dòng chú thích trạng thái và cột "Trạng thái" của bảng tổng hợp (CSV vẫn còn cột này); thêm `favicon.svg` hình căn nhà (chưa có apple-touch-icon PNG cho iOS). Commit `4c86f52`, `1836702`, `4ea2050`, `0d96fb3`.
 - Graphify: đồ thị cấu trúc ở `graphify-out/` chỉ nằm trên máy local, đã gỡ khỏi repo và có trong `.gitignore` (commit `ec970df`); không commit/push thư mục này.
 
 ## 3. Kiểm tra gần nhất
 
-- `npm test` (`node --test tests`): 53/53 pass. `npm run test:e2e`: 4/4 pass (modal xác nhận xoá, thẻ Thống kê).
+- `npm test` (`node --test tests`): 53/53 pass. `npm run test:e2e`: 12/12 pass (modal xác nhận xoá, thẻ Thống kê, sao chép ảnh, hạn đóng, favicon).
 - Cú pháp `js/**/*.js` và `Code.gs` (chép sang .js tạm rồi `node --check`): sạch.
 - Chưa có kiểm thử tự động trên trình duyệt (Playwright MCP không kết nối). Đã chụp thử thẻ theo dõi bằng Edge headless với dữ liệu giả.
 
