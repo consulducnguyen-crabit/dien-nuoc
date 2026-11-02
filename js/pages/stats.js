@@ -120,7 +120,6 @@ export function render(container) {
   // Bảng tổng hợp
   const dash = '—';
   const tbody = h('tbody', null, ...summaries.map((s) => {
-    const meta = STATUS_META[s.status];
     return h('tr', null,
       h('th', { scope: 'row' }, s.unit),
       h('td', null, s.elec ? formatNumber(s.elec.consumption) : dash),
@@ -128,7 +127,6 @@ export function render(container) {
       h('td', null, s.water ? formatNumber(s.water.consumption) : dash),
       h('td', null, s.water ? formatMoney(s.water.amount) : dash),
       h('td', null, s.status === 'none' ? dash : formatMoney(s.total)),
-      h('td', null, h('span', { class: `chip ${meta.chip}` }, meta.label)),
       h('td', null, h('div', { class: 'actions' },
         ...[['Điện', s.elec], ['Nước', s.water]].filter(([, inv]) => inv).map(([label, inv]) => {
           const btn = h('button', {
@@ -143,7 +141,7 @@ export function render(container) {
     h('table', { class: 'table' },
       h('caption', { class: 'sr-only' }, `Tổng hợp hoá đơn ${formatPeriod(period)}`),
       h('thead', null, h('tr', null,
-        ...['Căn', 'Điện (kWh)', 'Tiền điện', 'Nước (m³)', 'Tiền nước', 'Tổng', 'Trạng thái']
+        ...['Căn', 'Điện (kWh)', 'Tiền điện', 'Nước (m³)', 'Tiền nước', 'Tổng']
           .map((t) => h('th', { scope: 'col' }, t)),
         h('th', { scope: 'col' }, h('span', { class: 'sr-only' }, 'Thao tác')))),
       tbody,

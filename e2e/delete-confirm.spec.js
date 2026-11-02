@@ -69,3 +69,13 @@ test('Thống kê: không còn dòng chú thích trạng thái ở đầu trang'
   await expect(page.locator('.card-navy')).toBeVisible();
   await expect(page.locator('.legend')).toHaveCount(0);
 });
+
+test('Thống kê: bảng tổng hợp không còn cột Trạng thái', async ({ page }) => {
+  await openApp(page);
+  const heads = page.locator('.table thead th');
+  await expect(heads.first()).toBeVisible();
+  await expect(page.locator('.table thead th', { hasText: 'Trạng thái' })).toHaveCount(0);
+  // Số ô của hàng dữ liệu phải khớp số tiêu đề (không lệch cột sau khi bỏ cột)
+  const cols = await heads.count();
+  expect(await page.locator('.table tbody tr').first().locator('th, td').count()).toBe(cols);
+});
