@@ -50,3 +50,15 @@ test('Desktop: bấm sao chép thì ghi clipboard, không tải file', async ({ 
   expect(await page.evaluate(() => window.__clip)).toBe(1);
   expect(downloaded).toBe(false);
 });
+
+test('Mobile: trang Thông báo không tràn ngang, ảnh xem trước cuộn trong khung', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await openApp(page, '#thong-bao');
+  await expect(page.locator('.notice')).toBeVisible();
+  const m = await page.evaluate(() => ({
+    doc: document.documentElement.scrollWidth, view: window.innerWidth,
+    btn: document.querySelector('.actions .btn-secondary').getBoundingClientRect().right,
+  }));
+  expect(m.doc).toBeLessThanOrEqual(m.view);
+  expect(m.btn).toBeLessThanOrEqual(m.view);
+});
