@@ -268,6 +268,17 @@
 /* Tắt tabular-nums trong ảnh: số/ký tự '→' '³' lệch font dự phòng khi chụp dễ bị đè chữ */
 .notice .num { font-variant-numeric: normal; }
 .notice-total { margin: 16px 20px; padding: 16px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, var(--navy), var(--navy-2)); display: flex; flex-direction: column; gap: 2px; }
+/* Hạn đóng: huy hiệu vàng cam chứa tờ lịch (tĩnh, vì ảnh xuất ra là PNG) */
+.notice-due { margin-top: 12px; display: flex; align-items: center; gap: 14px; padding: 10px 14px 10px 10px; border-radius: 14px; color: #3A2500; background: linear-gradient(135deg, #FFC93C, #FF9F1C); }
+.notice-cal { width: 62px; flex: none; border-radius: 9px; overflow: hidden; background: #fff; color: var(--ink); text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+.notice-cal i { display: block; font-style: normal; background: #E5383B; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 0; letter-spacing: .06em; }
+.notice-cal b { display: block; font-size: 30px; line-height: 1.1; font-weight: 900; padding-top: 2px; }
+.notice-cal em { display: block; font-style: normal; font-size: 10px; font-weight: 700; color: var(--ink-2); padding-bottom: 4px; }
+.notice-due-txt small { display: block; font-size: 11px; font-weight: 800; letter-spacing: .1em; }
+.notice-due-txt b { display: block; font-size: 24px; font-weight: 900; line-height: 1.2; }
+.notice-due.is-empty { color: #fff; background: rgba(255,255,255,.15); }
+.notice-due.is-empty .notice-cal { opacity: .85; }
+.notice-due.is-empty .notice-due-txt b { font-size: 16px; font-weight: 700; }
 .notice-bank { padding: 0 20px 20px; display: flex; gap: 16px; align-items: center; justify-content: space-between; }
 .notice-bank-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .notice-bank-lines { display: flex; flex-direction: column; gap: 4px; }

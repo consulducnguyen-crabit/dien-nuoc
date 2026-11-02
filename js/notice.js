@@ -77,6 +77,23 @@ function kvRow(label, value) {
   return h('div', { class: 'notice-row' }, h('span', null, label), h('strong', { class: 'num' }, value));
 }
 
+/** Huy hiệu hạn đóng: tờ lịch (tháng/ngày/năm) + ngày đầy đủ; chưa chọn ngày thì hiện mờ, không nổi bật. */
+function dueBadge(dueDate) {
+  const m = String(dueDate ?? '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const text = formatDate(dueDate);
+  return h('div', { class: m ? 'notice-due' : 'notice-due is-empty' },
+    h('div', { class: 'notice-cal' },
+      h('i', null, m ? `THÁNG ${Number(m[2])}` : 'THÁNG —'),
+      h('b', null, m ? String(Number(m[3])) : '?'),
+      h('em', null, m ? m[1] : '—'),
+    ),
+    h('div', { class: 'notice-due-txt' },
+      h('small', null, 'HẠN ĐÓNG TIỀN'),
+      h('b', null, text || 'chưa chọn'),
+    ),
+  );
+}
+
 /**
  * @param {object} o
  * @param {object} o.summary  kết quả summarizeUnit()
@@ -119,7 +136,7 @@ export function buildNoticeNode({ summary: fullSummary, period, dueDate, config 
   node.append(h('div', { class: 'notice-total' },
     h('span', null, 'Tổng cần đóng'),
     h('strong', { class: 'num-xl' }, formatMoney(summary.total)),
-    h('span', null, `Hạn đóng: ${formatDate(dueDate) || 'chưa chọn'}`),
+    dueBadge(dueDate),
   ));
 
   // Khối ngân hàng: chỉ hiện phần đã có, không để placeholder trống
