@@ -63,3 +63,9 @@ test('Thống kê: thẻ căn không còn nút Tạo thông báo, khối Nước
   await expect(page.getByText('✓✓ Đã thông báo').first()).toBeVisible();
   await expect(page.getByText('Chưa thông báo').first()).toBeVisible();
 });
+
+test('Thống kê: không còn dòng chú thích trạng thái ở đầu trang', async ({ page }) => {
+  await openApp(page);
+  await expect(page.locator('.card-navy')).toBeVisible();
+  await expect(page.locator('.legend')).toHaveCount(0);
+});

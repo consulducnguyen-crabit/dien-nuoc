@@ -169,7 +169,6 @@
 .totals-list li { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; }
 
 /* Thống kê */
-.legend { display: flex; flex-wrap: wrap; gap: 8px; }
 .card-navy { background: linear-gradient(135deg, var(--navy), var(--navy-2)); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .navy-label, .navy-sub { color: #fff; font-weight: 500; }
 .navy-value { display: block; margin: 4px 0; }

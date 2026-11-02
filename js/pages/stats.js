@@ -107,11 +107,6 @@ export function render(container) {
   const grand = summaries.reduce((sum, s) => sum + s.total, 0);
   const fullCount = summaries.filter((s) => s.status === 'full').length;
 
-  // Chú thích trạng thái
-  const legend = h('ul', { class: 'legend', 'aria-label': 'Chú thích trạng thái' },
-    ...Object.values(STATUS_META).map((m) => h('li', null, h('span', { class: `chip ${m.chip}` }, m.label))),
-  );
-
   // Thẻ navy: tổng cần đóng + donut số căn đủ điện + nước
   const navy = h('div', { class: 'card card-navy' },
     h('div', null,
@@ -166,7 +161,6 @@ export function render(container) {
   loadHtmlToImage().catch(() => {}); // nạp sẵn thư viện xuất ảnh để bấm nút là chụp ngay
 
   container.append(
-    legend,
     navy,
     cardsGrid,
     h('div', { class: 'card' },
