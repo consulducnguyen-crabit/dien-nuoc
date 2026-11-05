@@ -1,13 +1,14 @@
 # STATE.md: trạng thái phiên làm việc
 
-Cập nhật lần cuối: 2026-11-01. Commit gần nhất: `ec970df` (nhánh `main`, đã push lên `origin/main`).
+Cập nhật lần cuối: 2026-11-06. Commit gần nhất: `60374ee` (nhánh `main`, đã push lên `origin/main`).
 Repo: https://github.com/consulducnguyen-crabit/dien-nuoc. Trang chạy trên GitHub Pages (main / root).
 
-## 0. Chốt phiên (2026-11-01)
+## 0. Chốt phiên (2026-11-06)
 
-- Git: `main` khớp `origin/main` tại `ec970df` (đã push). Cây làm việc sạch.
-- Test: 53/53 pass (`npm test`). Test giao diện Playwright: `npm run test:e2e` (thư mục `e2e/`, Edge có sẵn, Apps Script giả; 4 test xác nhận xoá).  Không có việc dở dang, không có agent nào còn chạy.
-- Việc làm đầu tiên ở phiên sau: xem mục 4 (Apps Script cần dán lại và Deploy New version; kiểm tra thực tế trên điện thoại sau khi xoá bộ nhớ đệm).
+- Git: `main` khớp `origin/main` tại `60374ee` (đã push: nút cài ứng dụng PWA). Cây làm việc sạch, trừ thư mục `.playwright-mcp/` (ảnh chụp QA, không commit; có thể xoá hoặc thêm vào `.gitignore`).
+- Test: `npm test` 60/60 pass; `npm run test:e2e` 22/22 pass. Không có việc dở dang, không có agent nào còn chạy.
+- Việc làm đầu tiên ở phiên sau: thử PWA trên máy thật (iPhone: thêm vào MH chính, nút tải ảnh PNG/CSV ở chế độ app, mất cấu hình thì dùng ô dán liên kết cài nhanh; Android: hộp cài + icon). Nếu tải ảnh trên iOS hỏng thì làm Web Share API. Sau đó xem mục 4 (Apps Script cần dán lại và Deploy New version).
+- Việc nhẹ còn mở từ review: chặn `beforeinstallprompt` thật của Edge trong test "có beforeinstallprompt"; thêm test tràn ngang cho `#thong-ke`; icon/tên "RentMaster" nên chốt trước khi cài trên iPhone (iOS không tự cập nhật).
 
 ## 1. Tổng quan
 
