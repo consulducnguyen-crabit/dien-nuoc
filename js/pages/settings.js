@@ -7,8 +7,9 @@ import { matchUnit } from '../matcher.js';
 import { toast, setBusy } from '../ui.js';
 import { confirmDialog } from '../modal.js';
 import { qrFromConfig, qrToConfig, isImageDataUrl, QR_MAX_LENGTH } from '../qr.js';
-import { buildQuickSetupHash } from '../quicksetup.js';
-import { ping, saveUnits, saveConfig, saveConnection, isConfigured } from '../api.js';
+import { buildQuickSetupHash, extractQuickSetupHash, parseQuickSetupHash } from '../quicksetup.js';
+import { getInstallPlatform, onInstallChange, promptInstall, INSTALL_GUIDE } from '../pwa-install.js';
+import { ping, saveUnits, saveConfig, saveConnection, isConfigured, isAllowedUrl } from '../api.js';
 import { reloadAll, invalidateData, unitToRow, errorMessage } from '../data.js';
 
 // Quy tắc trùng với validate phía Apps Script
@@ -65,6 +66,36 @@ export function render(container) {
       h('li', null, 'Dán URL Web app và token vào mục “Kết nối Google Sheets” bên dưới, bấm Lưu kết nối.'),
     ),
   );
+
+  // ---- Cài ứng dụng lên điện thoại (PWA): hiện cả khi chưa cấu hình và trên desktop ----
+  const installStatus = h('span', { id: 'install-status', class: 'chip' });
+  const installBtn = h('button', { id: 'install-btn', type: 'button', class: 'btn' }, 'Thêm vào màn hình chính');
+  const installNote = h('p', { id: 'install-note', class: 'text-sub' },
+    'Trên iPhone, ứng dụng ở màn hình chính có bộ nhớ riêng nên cần nhập lại kết nối: dán liên kết cài nhanh vào ô “Dán liên kết cài nhanh” ở mục Kết nối Google Sheets bên dưới.');
+  const installCard = h('div', { class: 'card', id: 'install-card' },
+    h('div', { class: 'card-head' }, h('h2', null, 'Cài ứng dụng lên điện thoại'), installStatus),
+    h('p', { class: 'text-sub' }, 'Thêm trang này vào màn hình chính để mở như một ứng dụng, toàn màn hình, không có thanh địa chỉ.'),
+    h('div', { class: 'actions mt' }, installBtn),
+    installNote,
+  );
+  function paintInstall() {
+    const installed = getInstallPlatform() === 'installed';
+    installStatus.className = installed ? 'chip chip-ok' : 'chip';
+    installStatus.textContent = installed ? 'Đã cài' : 'Chưa cài';
+    installBtn.hidden = installed;
+  }
+  installBtn.addEventListener('click', async () => {
+    const platform = getInstallPlatform();
+    try {
+      if (platform === 'prompt') { await promptInstall(); return; }
+      const installGuide = INSTALL_GUIDE[platform];
+      if (!installGuide) return;
+      await confirmDialog({ title: installGuide.title, message: installGuide.message, details: installGuide.steps, confirmText: 'Đã hiểu', danger: false, hideCancel: true });
+    } catch {
+      toast('Không mở được hộp thoại cài đặt. Hãy dùng menu của trình duyệt > Thêm vào màn hình chính.', 'error');
+    }
+  });
+  paintInstall();
 
   // ---- Danh sách căn ----
   let rows = state.units.map((u) => ({ ...u }));
@@ -305,6 +336,13 @@ export function render(container) {
   quickResult.hidden = true;
   const quickBox = h('div', { class: 'mt' }, quickBtn, quickResult);
 
+  // Dán liên kết cài nhanh (dùng cho app ở màn hình chính của iPhone, nơi hash bị xoá ngay khi mở)
+  const pasteInput = h('input', { id: 'cfg-quick-paste', class: 'input', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'Dán liên kết cài nhanh…' });
+  const pasteBtn = h('button', { type: 'button', class: 'btn btn-secondary' }, 'Áp dụng');
+  const pasteBox = h('div', { class: 'field mt' },
+    h('label', { for: 'cfg-quick-paste' }, 'Dán liên kết cài nhanh'),
+    h('div', { class: 'actions' }, pasteInput, pasteBtn));
+
   const connCard = h('div', { class: 'card' },
     h('div', { class: 'card-head' }, h('h2', null, 'Kết nối Google Sheets'), statusChip),
     h('div', { class: 'form-stack mt' },
@@ -314,6 +352,7 @@ export function render(container) {
     ),
     h('div', { class: 'actions mt' }, saveConnBtn, testBtn),
     quickBox,
+    pasteBox,
   );
 
   // Liên kết cài nhanh: chỉ dựng khi bấm, dùng URL/token ĐÃ LƯU (không lấy từ ô nhập chưa lưu)
@@ -356,6 +395,35 @@ export function render(container) {
     return true;
   }
 
+  // Áp dụng liên kết dán: dùng đúng các lớp kiểm tra như applyQuickSetup (main.js); KHÔNG log/toast token
+  pasteBtn.addEventListener('click', async () => {
+    const hash = extractQuickSetupHash(pasteInput.value);
+    const parsed = hash ? parseQuickSetupHash(hash) : null;
+    let ok = false;
+    if (parsed && isAllowedUrl(parsed.url)) {
+      const before = loadCredentials();
+      try {
+        saveConnection(parsed.url, parsed.token);
+        ok = true;
+        const after = loadCredentials();
+        if (after.url !== before.url || after.token !== before.token) invalidateData();
+        urlInput.value = after.url;
+        tokenInput.value = after.token;
+      } catch {
+        ok = false; // không log: lỗi có thể liên quan tới token
+      }
+    }
+    pasteInput.value = ''; // xoá ô dù thành công hay không
+    if (!ok) { toast('Liên kết cài nhanh không hợp lệ hoặc bị hỏng. Chưa lưu gì.', 'error'); return; }
+    guide?.remove();
+    quickBtn.disabled = !isConfigured();
+    quickResult.hidden = true;
+    setState({ connection: 'unchecked' });
+    toast('Đã nhập cấu hình từ liên kết cài nhanh.', 'ok');
+    setBusy(pasteBtn, true);
+    try { await reloadAll(); } finally { setBusy(pasteBtn, false); }
+  });
+
   saveConnBtn.addEventListener('click', async () => {
     if (!storeCredentials()) return;
     setState({ connection: 'unchecked' });
@@ -384,13 +452,16 @@ export function render(container) {
   // appendChildren bỏ qua guide = null (container.append(null) sẽ chèn chữ "null")
   appendChildren(container, [
     guide,
+    installCard,
     unitsCard,
     h('div', { class: 'grid grid-2 grid-top' }, bankCard, connCard),
   ]);
 
   syncLock();
-  return subscribe((s, changed) => {
+  const unsubscribe = subscribe((s, changed) => {
     if (changed.includes('connection')) paintStatus(s);
     if (changed.includes('loaded')) syncLock();
   });
+  const offInstall = onInstallChange(paintInstall);
+  return () => { unsubscribe(); offInstall(); };
 }

@@ -79,9 +79,20 @@ Lưu ý: ảnh được gửi tới Google Drive của chủ Sheet để nhận 
 
 1. Trên máy tính đã kết nối xong, vào **Cấu hình** > **Kết nối Google Sheets** > bấm **Tạo liên kết cài nhanh**, rồi **Sao chép liên kết**.
 2. Chuyển liên kết sang điện thoại bằng cách an toàn (ví dụ tự gửi qua ghi chú riêng tư), mở bằng trình duyệt: app tự lưu cấu hình và xoá token khỏi thanh địa chỉ.
-3. Sau đó dùng app bình thường. Có thể lưu liên kết làm dấu trang hoặc "Thêm vào màn hình chính" để cài lại khi mất dữ liệu trình duyệt.
+3. Sau đó dùng app bình thường. Có thể lưu liên kết làm dấu trang để cài lại khi mất dữ liệu trình duyệt. Lưu ý: KHÔNG dùng liên kết này để "Thêm vào màn hình chính", vì phần sau dấu `#` bị xoá ngay khi mở nên biểu tượng sẽ không còn mang theo cấu hình (xem mục "Cài như ứng dụng" bên dưới).
 
 Lưu ý: liên kết chứa token (nằm sau dấu `#` nên không gửi lên máy chủ), nên KHÔNG gửi vào nhóm chat hay nơi công khai. Nếu liên kết bị lộ: vào Apps Script > Project Settings > Script Properties, đổi giá trị `API_TOKEN` sang chuỗi mới, rồi nhập lại token mới ở mọi thiết bị (liên kết cũ sẽ không còn dùng được).
+
+### Cài như ứng dụng
+
+Vào **Cấu hình** > thẻ **Cài ứng dụng lên điện thoại** > bấm **Thêm vào màn hình chính**; app mở toàn màn hình, không có thanh địa chỉ.
+
+- **Android (Chrome/Edge)**: bấm nút, xác nhận hộp thoại cài đặt của trình duyệt.
+- **iPhone/iPad (Safari)**: bấm nút Chia sẻ > **Thêm vào Màn hình chính** > **Thêm**.
+- **Mở trong Zalo/Facebook/Instagram**: các trình duyệt nhúng này không cài được. Mở menu, chọn mở bằng Safari/Chrome rồi làm lại.
+- **Trình duyệt khác**: menu trình duyệt > **Thêm vào màn hình chính** hoặc **Cài đặt ứng dụng**.
+
+Lưu ý iPhone: app ở màn hình chính có bộ nhớ riêng, tách khỏi Safari, nên mở lần đầu cần nhập lại kết nối. Dán liên kết cài nhanh (tạo ở mục trên) vào ô **Dán liên kết cài nhanh** > **Áp dụng** trong mục **Kết nối Google Sheets**.
 
 ## 7. Nhập dữ liệu ban đầu
 

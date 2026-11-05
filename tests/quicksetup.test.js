@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { buildQuickSetupHash, parseQuickSetupHash } from '../js/quicksetup.js';
+import { buildQuickSetupHash, parseQuickSetupHash, extractQuickSetupHash } from '../js/quicksetup.js';
 
 const URL_OK = 'https://script.google.com/macros/s/AKfycbx_abc-123/exec';
 
@@ -26,4 +26,16 @@ test('từ chối đầu vào hỏng', () => {
 
 test('từ chối đầu vào quá dài (>2000 ký tự)', () => {
   assert.equal(parseQuickSetupHash(buildQuickSetupHash(URL_OK, 'x'.repeat(3000))), null);
+});
+
+test('extractQuickSetupHash: URL đầy đủ, chỉ hash, chuỗi rác, rỗng', () => {
+  const hash = buildQuickSetupHash(URL_OK, 'tok3n');
+  assert.equal(extractQuickSetupHash(`https://user.github.io/dien-nuoc/${hash}`), hash);
+  assert.equal(extractQuickSetupHash(`  ${hash}\n`), hash);
+  assert.equal(extractQuickSetupHash(hash.slice(1)), hash); // thiếu '#'
+  assert.deepEqual(parseQuickSetupHash(extractQuickSetupHash(`https://x/y/${hash}`)), { url: URL_OK, token: 'tok3n' });
+  assert.equal(extractQuickSetupHash('hello world'), null);
+  assert.equal(extractQuickSetupHash('#cai-nhanh='), null);
+  assert.equal(extractQuickSetupHash(''), null);
+  assert.equal(extractQuickSetupHash(null), null);
 });

@@ -5,10 +5,10 @@ import { h } from './dom.js';
 let current = null;
 
 /**
- * @param {{title:string, message?:string, details?:string[], confirmText?:string, cancelText?:string, danger?:boolean}} o
+ * @param {{title:string, message?:string, details?:string[], confirmText?:string, cancelText?:string, danger?:boolean, hideCancel?:boolean}} o
  * @returns {Promise<boolean>} true chỉ khi người dùng bấm nút xác nhận
  */
-export function confirmDialog({ title, message = '', details = [], confirmText = 'Xoá', cancelText = 'Huỷ', danger = true }) {
+export function confirmDialog({ title, message = '', details = [], confirmText = 'Xoá', cancelText = 'Huỷ', danger = true, hideCancel = false }) {
   if (current) return Promise.resolve(false); // đang có hộp thoại khác: không chồng thêm
   return new Promise((resolve) => {
     let result = false;
@@ -18,7 +18,7 @@ export function confirmDialog({ title, message = '', details = [], confirmText =
       h('h2', { id: 'modal-title' }, title),
       message ? h('p', { class: 'text-sub mt' }, message) : null,
       details.length ? h('ul', { class: 'modal-list' }, ...details.map((d) => h('li', null, d))) : null,
-      h('div', { class: 'actions mt' }, cancelBtn, okBtn));
+      h('div', { class: 'actions mt' }, hideCancel ? null : cancelBtn, okBtn));
     const finish = (value) => { result = value; dlg.close(); };
     cancelBtn.addEventListener('click', () => finish(false));
     okBtn.addEventListener('click', () => finish(true));
@@ -27,6 +27,6 @@ export function confirmDialog({ title, message = '', details = [], confirmText =
     current = dlg;
     document.body.append(dlg);
     dlg.showModal();
-    cancelBtn.focus();
+    (hideCancel ? okBtn : cancelBtn).focus(); // hộp thoại chỉ thông tin (hideCancel): focus nút xác nhận
   });
 }

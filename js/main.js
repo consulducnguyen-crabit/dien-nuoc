@@ -4,6 +4,7 @@ import { isConfigured, isAllowedUrl, saveConnection } from './api.js';
 import { reloadAll, invalidateData } from './data.js';
 import { QUICK_PREFIX, parseQuickSetupHash } from './quicksetup.js';
 import { h } from './dom.js';
+import { initInstallCapture } from './pwa-install.js';
 import { staggerIn, runCountUps, toast } from './ui.js';
 import { render as renderInput } from './pages/input.js';
 import { render as renderStats } from './pages/stats.js';
@@ -158,6 +159,7 @@ connectionEl.textContent = CONNECTION_TEXT[getState().connection];
 document.querySelector('.icon-btn')?.addEventListener('click', () => { location.hash = '#nhap'; });
 
 window.addEventListener('hashchange', navigate);
+initInstallCapture(); // sớm, trước navigate(): beforeinstallprompt có thể bắn bất kỳ lúc nào
 navigate();
 // Tải dữ liệu thật khi mở app (chưa cấu hình thì reloadAll chỉ dọn state, không gọi mạng)
 reloadAll();

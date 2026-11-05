@@ -39,3 +39,15 @@ export function parseQuickSetupHash(hash) {
     return null;
   }
 }
+
+/**
+ * Tách phần '#cai-nhanh=...' khỏi chuỗi người dùng dán (URL đầy đủ hoặc chỉ phần hash, có thể thiếu '#').
+ * Trả về chuỗi hash hoặc null. Chỉ tách chuỗi, việc kiểm tra nội dung do parseQuickSetupHash đảm nhiệm.
+ */
+export function extractQuickSetupHash(text) {
+  if (typeof text !== 'string') return null;
+  const i = text.indexOf(QUICK_PREFIX.slice(1)); // 'cai-nhanh=' (bỏ '#' để nhận cả khi thiếu '#')
+  if (i < 0) return null;
+  const value = text.slice(i + QUICK_PREFIX.length - 1).split(/\s/)[0];
+  return value ? QUICK_PREFIX + value : null;
+}

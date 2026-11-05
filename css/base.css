@@ -117,12 +117,15 @@ h2 { font-size: 16px; font-weight: 700; }
   body { background-attachment: scroll; }
   .shell { margin: 0; border-radius: 0; min-height: 100vh; box-shadow: none; }
   .sidebar { display: none; }
-  .main { padding: 20px 16px 96px; }
+  /* Safe-area: tránh tai thỏ/thanh Home khi mở toàn màn hình (viewport-fit=cover) */
+  .main {
+    padding: 20px max(16px, env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
   h1 { font-size: 24px; }
   .bottom-nav {
     display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
     background: var(--card); box-shadow: 0 -6px 20px rgba(79,102,224,.12);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    padding: 6px max(4px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
   }
   .bottom-nav a {
     flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
