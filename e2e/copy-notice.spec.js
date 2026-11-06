@@ -35,6 +35,18 @@ test('Mobile: bấm sao chép thì tải file PNG về, không ghi clipboard', a
   await ctx.close();
 });
 
+test('Mobile: ô đã thông báo hiện dấu ✓✓ + số tiền, không hiện chữ, không tràn ô', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await openApp(page, '#nhap'); // dữ liệu giả: nước TD473 đã thông báo
+  const done = page.locator('.track-done').first();
+  await expect(done).toBeVisible();
+  await expect(done.locator('.track-mark')).toBeVisible();
+  await expect(done.locator('.track-amt')).toBeVisible();
+  await expect(done.locator('.track-word')).toBeHidden();
+  const m = await done.evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth }));
+  expect(m.sw).toBeLessThanOrEqual(m.cw);
+});
+
 test('Desktop: bấm sao chép thì ghi clipboard, không tải file', async ({ page }) => {
   await stubLib(page);
   await page.addInitScript(() => {

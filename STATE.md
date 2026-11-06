@@ -25,11 +25,12 @@ Dữ liệu nằm trong Google Sheets, truy cập qua Apps Script Web App ([apps
 - Đồng bộ "Đã thông báo" giữa Nhập, Thống kê, Thông báo (từng loại điện/nước; logic chung ở js/notify-actions.js). Thống kê: mỗi khối Điện/Nước có trạng thái + nút sao chép. Thông báo: chọn Gộp/Chỉ điện/Chỉ nước, Tải PNG và Sao chép đều gắn cờ. state.notifiedRev báo router không dựng lại cả trang. Đã commit `f5055c8`; chưa kiểm tra trên trình duyệt thật.
 - Giao diện (phiên gần nhất): ảnh thông báo có huy hiệu "Hạn đóng" vàng cam kèm tờ lịch (`dueBadge()` trong js/notice.js, mờ khi chưa chọn ngày); trang Thống kê bỏ dòng chú thích trạng thái và cột "Trạng thái" của bảng tổng hợp (CSV vẫn còn cột này); thêm `favicon.svg` hình căn nhà (chưa có apple-touch-icon PNG cho iOS). Commit `4c86f52`, `1836702`, `4ea2050`, `0d96fb3`.
 - Cài như ứng dụng (PWA, chưa commit): `manifest.webmanifest` (tên dưới icon "RentMaster", standalone, start_url/scope `./`), icon PNG ở `icons/` + `apple-touch-icon.png` (sinh bằng `tools/gen-icons.mjs`), meta iOS/Android + `viewport-fit=cover` + safe-area CSS. Thẻ `#install-card` đầu trang Cấu hình (module `js/pwa-install.js`: nhận diện installed/prompt/ios/inapp/other, bắt `beforeinstallprompt` từ main.js). Ô `#cfg-quick-paste` để dán liên kết cài nhanh ngay trong app (vì app iOS ở màn hình chính có localStorage riêng). `confirmDialog` có thêm `hideCancel`. Không dùng service worker. Sửa kèm: `.table-wrap{position:relative}` để `sr-only` trong bảng không làm trang tràn ngang trên mobile. Chưa thử trên iPhone/Android thật; cần thử tải ảnh PNG/CSV khi chạy chế độ app trên iOS (nếu hỏng thì dùng Web Share API).
+- Mobile (container thẻ dưới 460px): ô "Đã thông báo" ở thẻ Hoá đơn kỳ hiện dấu ✓✓ + số tiền thay cho chữ (CSS trong `css/components.css`; không có số tiền thì giữ chữ nhờ class `track-word-keep` ở `js/pages/input-tracker.js`). Màn rộng giữ nguyên. Có test e2e ở `e2e/copy-notice.spec.js`.
 - Graphify: đồ thị cấu trúc ở `graphify-out/` chỉ nằm trên máy local, đã gỡ khỏi repo và có trong `.gitignore` (commit `ec970df`); không commit/push thư mục này.
 
 ## 3. Kiểm tra gần nhất
 
-- `npm test` (`node --test tests`): 60/60 pass. `npm run test:e2e`: 22/22 pass (thêm 9 test PWA ở `e2e/pwa-install.spec.js` + 1 test ô dán URL không hợp lệ).
+- `npm test` (`node --test tests`): 60/60 pass. `npm run test:e2e`: 23/23 pass (thêm 9 test PWA ở `e2e/pwa-install.spec.js` + 1 test ô dán URL không hợp lệ + 1 test ô đã thông báo trên mobile).
 - Cú pháp `js/**/*.js` và `Code.gs` (chép sang .js tạm rồi `node --check`): sạch.
 - Chưa có kiểm thử tự động trên trình duyệt (Playwright MCP không kết nối). Đã chụp thử thẻ theo dõi bằng Edge headless với dữ liệu giả.
 

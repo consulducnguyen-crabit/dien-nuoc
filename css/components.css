@@ -232,11 +232,14 @@
   content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%;
   border: 2px solid rgba(31,63,122,.3); border-top-color: #1F3F7A; animation: spin .7s linear infinite;
 }
-/* Màn hẹp: bỏ dấu ✓✓ trong ô 'Đã thông báo' để chữ gọn tối đa 2 dòng, không tràn khỏi ô */
+/* Màn hẹp (mobile): ô 'Đã thông báo' hiện dấu ✓✓ + số tiền thay cho chữ (nghĩa "đã thông báo" nằm ở aria-label + nền xanh đậm).
+   Không có số tiền thì giữ chữ. */
 @container (max-width: 459px) {
   .track-table thead th:first-child { width: 60px; }
-  .track-done { font-size: 11px; padding: 0 2px; }
-  .track-done .track-mark { display: none; }
+  .track-done { font-size: 12px; padding: 0 4px; gap: 4px; white-space: nowrap; }
+  .track-done .track-mark { width: 16px; height: 13px; }
+  .track-done .track-word:not(.track-word-keep) { display: none; }
+  .track-done .track-amt { display: inline; font-weight: 700; font-size: 12px; }
 }
 .track-amt { display: none; font-weight: 600; font-size: 12px; }
 /* Số tiền chỉ hiện khi thẻ đủ rộng */

@@ -56,7 +56,7 @@ function cell(unit, kind, inv) {
   },
   notified ? doubleMarkIcon() : null,
   notified
-    ? h('span', { class: 'track-word' }, 'Đã thông báo')
+    ? h('span', { class: inv.amount ? 'track-word' : 'track-word track-word-keep' }, 'Đã thông báo')
     : h('span', { class: 'track-word' }, inv.amount ? formatMoney(inv.amount) : 'Có'),
   notified && inv.amount ? h('span', { class: 'track-amt' }, formatMoney(inv.amount)) : null);
   return h('td', { class: 'track-td' }, btn);
